@@ -24,9 +24,40 @@ export async function addMember(formData: FormData) {
     const gender = formData.get('gender') as string
     const plan_id = formData.get('plan_id') as string
     const start_date_str = formData.get('start_date') as string
+    const avatarFile = formData.get('avatar_file') as File | null
 
     if (!full_name || !phone || !plan_id) {
         throw new Error("Required fields missing")
+    }
+
+    let photo_url: string | null = null
+
+    if(avatarFile && avatarFile.size > 0 && avatarFile.name !== 'undefined') {
+        const fileExt = avatarFile.name.split('.').pop() || 'jpg'
+        const fileName = `${gym.id}/${Date.now()}.${fileExt}`
+
+        const arrayBuffer = await avatarFile.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+
+        const { data: uploadData, error: uploadError } = await supabase
+            .storage
+            .from('member-photos')
+            .upload(fileName, buffer, {
+                contentType: avatarFile.type || 'image/jpeg',
+                cacheControl: '3600',
+                upsert: true
+            })
+
+        if (!uploadError && uploadData) {
+            const { data: publicUrlData } = supabase
+                .storage
+                .from('member-photos')
+                .getPublicUrl(uploadData.path)
+
+            photo_url = publicUrlData.publicUrl
+        } else {
+            console.error('Storage Upload Error:', uploadError)
+        }
     }
 
     const { data: plan } = await supabase
@@ -49,6 +80,7 @@ export async function addMember(formData: FormData) {
             phone,
             email,
             gender,
+            photo_url,
             status: 'active'
         })
         .select()
@@ -128,6 +160,28 @@ export async function deleteMembers(memberId: string) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if(!user) throw new Error("Unauthorized")
+
+    const { data: member} = await supabase
+        .from('members')
+        .select('photo_url')
+        .eq('id', memberId)
+        .single()
+
+    if(member?.photo_url) {
+        const urlParts = member.photo_url.split('/member-photos/')
+        if(urlParts.length > 1) {
+            const filePath = urlParts[1]
+
+            const { error: storageError } = await supabase
+                .storage
+                .from('member-photos')
+                .remove([filePath])
+
+            if(storageError) {
+                console.error("Error deleting member photo from storage:", storageError.message)
+            }
+        }
+    }
 
     const { error: subError } = await supabase
         .from('subscriptions')

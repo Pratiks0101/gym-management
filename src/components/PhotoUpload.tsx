@@ -1,0 +1,256 @@
+'use client'
+
+import React, { useRef, useState } from "react"
+import { Camera, Upload, X, User } from "lucide-react"
+import Image from "next/image"
+
+type PhotoUploadProps = {
+    onImageSelected: (file: File | null) => void
+}
+
+export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
+    const [preview, setPreview] = useState<string | null>(null)
+    const [isCameraActive, setIsCameraActive] = useState(false)
+    const videoRef = useRef<HTMLVideoElement | null>(null)
+    const streamRef = useRef<MediaStream | null>(null)
+    const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+    const compressImageNative = (file: File, maxDim = 800, quality = 0.75): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            const img = document.createElement('img')
+            const reader = new FileReader()
+
+            reader.onload = (e) => {
+                img.src = e.target?.result as string
+            }
+
+            img.onload = () => {
+                let width = img.width
+                let height = img.height
+
+                if(width > height) {
+                    if (width > maxDim) {
+                        height = Math.round((height * maxDim) / width)
+                        width = maxDim
+                    }
+                } else {
+                    if (height > maxDim) {
+                        width = Math.round((width * maxDim) / height)
+                        height = maxDim
+                    }
+                }
+
+                const canvas = document.createElement('canvas')
+                canvas.width = width
+                canvas.height = height
+
+                const ctx = canvas.getContext('2d')
+                if(ctx) {
+                    ctx.drawImage(img, 0, 0, width, height)
+                }
+
+                const dataUrl = canvas.toDataURL('image/jpeg', quality)
+
+                const arr = dataUrl.split(',')
+                const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg'
+                const bstr = atob(arr[1])
+                let n = bstr.length
+                const u8arr = new Uint8Array(n)
+                while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n)
+                }
+
+                const blob = new Blob([u8arr], {type:mime})
+                const compressedFile = new File(
+                    [blob],
+                    `${file.name.replace(/\.[^/.]+$/, "")}_compressed.jpg`,
+                    { type: 'image/jpeg' }
+                )
+                resolve(compressedFile)
+            }
+
+            img.onerror = (err) => reject(err)
+            reader.readAsDataURL(file)
+        })
+    }
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        try {
+            const compressed = await compressImageNative(file, 800, 0.75)
+
+            if(compressed.size > 300 * 1024) {
+                alert('Image size is too large even after compression. Please select a smaller photo')
+                return
+            }
+
+            console.log(`Original Size: ${(file.size / 1024).toFixed(1)} KB`)
+            console.log(`Compressed Size: ${(compressed.size / 1024).toFixed(1)} KB`)
+
+            const previewUrl = URL.createObjectURL(compressed)
+            setPreview(previewUrl)
+            onImageSelected(compressed)
+        } catch (error) {
+            console.error('Image Processing failed:', error)
+            alert('Failed to process image. Please try another file.')
+        }
+    }
+
+    const startCamera = async () => {
+        setIsCameraActive(true)
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: {facingMode: 'user', width: {ideal: 640}, height: {ideal:640}} })
+            streamRef.current = stream
+            if(videoRef.current) {
+                videoRef.current.srcObject = stream
+            }
+        } catch (err) {
+            console.error(err)
+            alert('Camera access denied or not available.')
+            setIsCameraActive(false)
+        }
+    }
+
+    const capturePhoto = async () => {
+        if (!videoRef.current) return
+
+        const video = videoRef.current
+        const canvas = document.createElement('canvas')
+        const size = Math.min(video.videoWidth || 640, video.videoHeight || 480)
+
+        
+        canvas.width = 600
+        canvas.height = 600
+        const ctx = canvas.getContext('2d')
+
+        if(ctx) {
+            const startX = (video.videoWidth - size) / 2
+            const startY = (video.videoHeight - size) / 2
+            ctx.drawImage(video, startX, startY, size, size, 0, 0, 600, 600)
+        }
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+        const arr = dataUrl.split(',')
+        const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg'
+        const bstr = atob(arr[1])
+        let n = bstr.length
+        const u8arr = new Uint8Array(n)
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n)
+        }
+
+        const blob = new Blob([u8arr], { type: mime })
+
+        const uniqueId = typeof crypto !== 'undefined' && crypto.randomUUID 
+                                                ? crypto.randomUUID() 
+                                                : Math.random().toString(36).substring(2)
+        const file = new File([blob], `capture_${uniqueId}.jpg`, { type: 'image/jpeg' })
+
+        setPreview(URL.createObjectURL(file))
+        onImageSelected(file)
+        stopCamera()
+    }
+
+    const stopCamera = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop())
+            streamRef.current = null
+        }
+        setIsCameraActive(false)
+    }
+
+    const clearPhoto = () => {
+        setPreview(null)
+        onImageSelected(null)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+
+    return (
+        <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700">Member Photo(Optional)</label>
+
+            <div className="flex items-center gap-4">
+                <div className="relative w-20 h-20 rounded-full border-2 border-dashed border-gray-300 overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
+                    {preview ? ( 
+                            <Image 
+                                src={preview} 
+                                alt="Member preview" 
+                                fill
+                                className="object-cover" />
+                    ) : ( 
+                        <User className="w-8 h-8 text-gray-400" />
+                    ) }
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-white hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                        <Upload className="w-3.5 h-3.5 text-gray-600" />
+                        Upload File
+                    </button>
+
+                    <button 
+                        type="button"
+                        onClick={startCamera}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-white hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                        <Camera className="w-3.5 h-3.5 text-gray-600" />
+                        Take a Photo
+                    </button>
+
+                    {preview && (
+                        <button
+                            type="button"
+                            onClick={clearPhoto}
+                            className="flex items-center gap-1 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                            Remove
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <input 
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden" 
+            />
+
+            {isCameraActive && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white p-4 rounded-xl max-w-md w-full space-y-4 text-center">
+                        <h3 className="font-semibold text-gray-900">Capture Member Photo</h3>
+                        <div className="relative rounded-lg overflow-hidden bg-black aspect-square flex items-center justify-center">
+                            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={stopCamera}
+                                className="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-100 cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={capturePhoto}
+                                className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 cursor-pointer"
+                            >
+                                Capture
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
