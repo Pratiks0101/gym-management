@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import PhotoUpload from "./PhotoUpload"
 import { addMember } from "@/app/actions/members"
 
@@ -12,6 +12,29 @@ export default function RegisterMemberForm({plans}: RegisterMemberFormProp) {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [loading, setLoading] = useState(false)
     const [uploadKey, setUploadKey] = useState(0)
+    const [selectedPlanId, setSelectedPlanId] = useState<string>("")
+    const [planPrice, setPlanPrice] = useState<number>(0)
+    const [discount, setDiscount] = useState<number | string>("")
+    const [amountPaid, setAmountPaid] = useState<number | string>("")
+
+    useEffect(() => {
+        const foundPlan = plans.find((p) => p.id === selectedPlanId)
+        if(foundPlan) {
+            const price = Number(foundPlan.price || 0)
+            setPlanPrice(price)
+            setAmountPaid(price)
+            setDiscount("")
+        } else {
+            setPlanPrice(0)
+            setAmountPaid("")
+            setDiscount("")
+        }
+    }, [selectedPlanId, plans])
+
+    const numDiscount = Number(discount || 0)
+    const finalTotal = Math.max(0, planPrice - numDiscount)
+    const numPaid = amountPaid === "" ? 0 : Number(amountPaid)
+    const calculatedDue = Math.max(0, finalTotal - numPaid)
 
     const handleSubmit = async(e:React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -28,6 +51,10 @@ export default function RegisterMemberForm({plans}: RegisterMemberFormProp) {
             await addMember(formData)
             form.reset()
             setSelectedFile(null)
+            setSelectedPlanId("")
+            setPlanPrice(0)
+            setDiscount("")
+            setAmountPaid("")
             setUploadKey((prevKey) => prevKey + 1)
             alert('Member registered successfully!')
         } catch (error: any) {
@@ -73,7 +100,8 @@ export default function RegisterMemberForm({plans}: RegisterMemberFormProp) {
                     />
                 </div>
 
-                <div>
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
                     <label htmlFor="email" className="block text-sm font-medium mb-1 text-gray-700">
                         Email (Optional)
                     </label>
@@ -100,7 +128,8 @@ export default function RegisterMemberForm({plans}: RegisterMemberFormProp) {
                         <option value="other">Other</option>
                     </select>
                 </div>
-
+                </div>
+                
                 <div>
                     <label 
                         htmlFor="plan_id" 
@@ -111,6 +140,8 @@ export default function RegisterMemberForm({plans}: RegisterMemberFormProp) {
                     <select 
                         name="plan_id" 
                         id="plan_id" 
+                        value={selectedPlanId}
+                        onChange={(e) => setSelectedPlanId(e.target.value)}
                         required
                         className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black"
                     >
@@ -139,12 +170,98 @@ export default function RegisterMemberForm({plans}: RegisterMemberFormProp) {
                         />
                 </div>
 
+                {selectedPlanId && (
+                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 scroll-py-3">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                            Payment Summary
+                        </h3>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label 
+                                    htmlFor="discount"
+                                    className="block text-xs font-medium scrollbar-track-gray-600 mb-1"
+                                >
+                                    Discount (₹)
+                                </label>
+                                <input 
+                                    type="number" 
+                                    name="discount"
+                                    id="discount"
+                                    min="0"
+                                    placeholder="0"
+                                    onChange={(e) => {
+                                        const val = e.target.value
+                                        setDiscount(val === "" ? "" : Number(val))
+                                    }}
+                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black"
+                                />
+                            </div>
+
+                            <div>
+                                <label 
+                                    htmlFor="amount_paid"
+                                    className="block text-xs font-medium text-gray-600 mb-1"
+                                >
+                                    Amount Paid (₹) *
+                                </label>
+                                <input 
+                                    type="number" 
+                                    name="amount_paid"
+                                    id="amount_paid"
+                                    min="0"
+                                    placeholder="0"
+                                    value={amountPaid}
+                                    onChange={(e) => {
+                                        const val = e.target.value
+                                        setAmountPaid(val === "" ? "" : Number(val))
+                                    }}
+                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label 
+                                    htmlFor="payment_method"
+                                    className="block text-xs font-medium text-gray-600 mb-1"
+                                >
+                                    Payment Method
+                                </label>
+                                <select 
+                                    name="payment_method" 
+                                    id="payment_method"
+                                    defaultValue="upi"
+                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black"
+                                >
+                                    <option value="upi">UPI</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="card">Card</option>
+                                </select>
+                            </div>
+
+                            <div className="flex flex-col justify-end">
+                                <div className="text-xs text-gray-500">
+                                    Total: <span className="font-semibold text-gray-900">{finalTotal}</span>
+                                </div>
+                                <div className="text-xs">
+                                    Pending Due:{" "}
+                                    <span>
+                                        ₹{calculatedDue}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <button 
                     type="submit"
                     disabled={loading}
                     className="w-full bg-black text-white font-medium py-2.5 rounded-lg text-sm hover:bg-gray-800 transition-colors cursor-pointer disabled:opacity-50"
                 >
-                    {loading ? 'Registering...' :'Register Member'}
+                    {loading ? 'Registering...' : 'Register Member'}
                 </button>
         </form>
     )

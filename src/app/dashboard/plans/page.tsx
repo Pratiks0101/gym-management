@@ -1,9 +1,9 @@
 import { 
-        getMembershipPlans, 
-        createMembershipPlan,
-        togglePlanStatus,
-        deleteMembershipPlan
-    } from "@/app/actions/plans";
+    getMembershipPlans, 
+    createMembershipPlan,
+    togglePlanStatus,
+    deleteMembershipPlan
+} from "@/app/actions/plans";
 
 export default async function PlansPage() {
     const result = await getMembershipPlans()
@@ -12,19 +12,20 @@ export default async function PlansPage() {
     return (
         <div className="p-6 space-y-8 max-w-6xl mx-auto">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Membership Plans</h1>
-                <p className="text-gray-500 text-sm mt-1">
-                    Manage pricing packages and subsription durations for your gym.
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Membership Plans</h1>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                    Manage pricing packages and subscription durations for your gym.
                 </p>
             </div>  
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="bg-white p-6 rounded-xl border shadow-sm h-fit">
-                    <h2 className="text-lg font-semibold mb-4 text-gray-900">Add new plan</h2>
+                {/* Form Section */}
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm h-fit">
+                    <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Add new plan</h2>
 
                     <form action={createMembershipPlan} className="space-y-4">
                         <div>
-                            <label htmlFor="name" className="block text-sm font-medium mb-1.5 text-gray-700">
+                            <label htmlFor="name" className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                                 Plan Name
                             </label>
                             <input 
@@ -33,12 +34,12 @@ export default async function PlansPage() {
                                 name="name"
                                 placeholder="e.g. Monthly Standard"
                                 required
-                                className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
                             />
                         </div>
 
                         <div>
-                            <label htmlFor="price" className="block text-sm font-medium mb-1.5 text-gray-700">
+                            <label htmlFor="price" className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                                 Price (₹)
                             </label>
                             <input 
@@ -48,12 +49,12 @@ export default async function PlansPage() {
                                 placeholder="1000"
                                 required
                                 min="0"
-                                className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
                             />
                         </div>
 
                         <div>
-                            <label htmlFor="duration_months" className="block text-sm font-medium mb-1.5 text-gray-700">
+                            <label htmlFor="duration_months" className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                                 Duration (Months)
                             </label>
                             <input 
@@ -63,24 +64,25 @@ export default async function PlansPage() {
                                 placeholder="1"
                                 min="1"
                                 required
-                                className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
                             />
                         </div>
 
                         <button
                             type="submit"
-                            className="w-full bg-black text-white font-medium py-2.5 rounded-lg text-sm hover:bg-gray-800 transition-colors cursor-pointer"
+                            className="w-full bg-slate-900 dark:bg-emerald-600 text-white font-medium py-2.5 rounded-lg text-sm hover:bg-slate-800 dark:hover:bg-emerald-500 transition-colors cursor-pointer"
                         >
                             Save Plan
                         </button>
                     </form>
                 </div>
 
+                {/* Plans List Section */}
                 <div className="lg:col-span-2">
-                    <h2 className="text-lg font-semibold mb-4 text-gray-900">Active Plans</h2>
+                    <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Active Plans</h2>
 
                     {plans.length === 0 ? (
-                        <div className="border border-dashed rounded-xl p-8 text-center bg-gray-50 text-gray-500">
+                        <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-xl p-8 text-center bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400">
                             No Plans created yet. Add your first membership plan using the form!
                         </div>
                     ) : (
@@ -90,35 +92,37 @@ export default async function PlansPage() {
                                 return (
                                     <div 
                                         key={plan.id}
-                                        className={`bg-white p-5 rounded-xl border shadow-sm space-y-4 transition-all ${!isActive ? 'opacity-60 bg-gray-50' : ''}`}
+                                        className={`bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 transition-all ${
+                                            !isActive ? 'opacity-60 bg-slate-50 dark:bg-slate-900/40' : ''
+                                        }`}
                                     >
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+                                                <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
                                                     {plan.plan_name}
                                                     {!isActive && (
-                                                        <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
+                                                        <span className="text-[10px] bg-red-100 text-red-600 dark:bg-red-950/80 dark:text-red-400 border border-red-200 dark:border-red-900 px-2 py-0.5 rounded-full font-medium">
                                                             Inactive
                                                         </span>
                                                     )}
                                                 </h3>
-                                                <p className="text-2xl font-extrabold text-black mt-1">
+                                                <p className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
                                                     ₹{plan.price}
                                                 </p>
                                             </div>
-                                            <span className="bg-gray-100 text-gray-800 text-sm font-semibold px-2.5 py-1 rounded-full">
+                                            <span className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm font-semibold px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700">
                                                 {plan.duration_months} Month{plan.duration_months > 1 ? 's' : ''}
                                             </span>
                                         </div>
 
-                                        <div className="flex items-center justify-between pt-3 border-t text-xs gap-2">
+                                        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 text-xs gap-2">
                                             <form action={togglePlanStatus.bind(null, plan.id, isActive)}>
                                                 <button
                                                     type="submit"
                                                     className={`px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
                                                         isActive 
-                                                            ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                                                            : 'bg-green-50 text-green-700 hover:bg-green-100'
+                                                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/80 border border-amber-200/60 dark:border-amber-900/50'
+                                                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 border border-emerald-200/60 dark:border-emerald-900/50'
                                                     }`}
                                                 >
                                                     {isActive ? 'Mark Inactive' : 'Mark Active'}
@@ -126,14 +130,14 @@ export default async function PlansPage() {
                                             </form>
 
                                             <div className="flex items-center gap-2">
-                                                    <form action={deleteMembershipPlan.bind(null, plan.id)}>
-                                                        <button
-                                                            type="submit"
-                                                            className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md font-medium cursor-pointer    transition-colors"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </form>
+                                                <form action={deleteMembershipPlan.bind(null, plan.id)}>
+                                                    <button
+                                                        type="submit"
+                                                        className="px-3 py-1.5 bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/80 border border-red-200/60 dark:border-red-900/50 rounded-md font-medium cursor-pointer transition-colors"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
