@@ -1,26 +1,38 @@
 'use client'
 
-import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { 
     LayoutDashboard, 
     Users, 
     CreditCard, 
     QrCode, 
-    ChevronLeft, 
-    ChevronRight, 
     Dumbbell,
-    Receipt
+    Receipt,
+    LogOut,
 } from "lucide-react"
 
-type SidebarProps = {
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarRail,
+} from "@/components/ui/sidebar"
+import { createClient } from "@/lib/supabase/client"
+import { getInitials } from "@/lib/utils"
+
+type AppSidebarProps = {
     gymName: string
+    userEmail?: string
 }
 
-export function AppSidebar({ gymName }: SidebarProps) {
-    const [isCollapsed, setIsCollapsed] = useState(false)
+export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
     const pathname = usePathname()
+    const router = useRouter()
 
     const navItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -30,52 +42,102 @@ export function AppSidebar({ gymName }: SidebarProps) {
         { label: "Attendance", href: "/dashboard/attendance", icon: QrCode },
     ]
 
+    const handleSignOut = async () => {
+        const supabase = createClient()
+        await supabase.auth.signOut()
+        router.push("/login")
+        router.refresh()
+    }
+
+    const initials = getInitials(gymName)
+
     return (
-        <aside 
-            className={`h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 relative flex flex-col shrink-0 ${
-                isCollapsed ? "w-16 sm:w-20" : "w-60 sm:w-64"
-            }`}
-        >
-            <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
-                <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="p-2 bg-emerald-600 text-white rounded-xl shrink-0">
-                        <Dumbbell className="w-5 h-5" />
-                    </div>
-                    {!isCollapsed && (
-                        <span className="font-extrabold text-base text-slate-900 dark:text-white tracking-tight whitespace-nowrap truncate">
-                            {gymName}
-                        </span>
-                    )}
-                </div>
-                <button
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
-                >
-                    {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-                </button>
-            </div>
-
-            <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-                {navItems.map((item) => {
-                    const Icon = item.icon
-                    const isActive = pathname === item.href
-
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-                                isActive
-                                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
-                                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"
-                            } ${isCollapsed ? "justify-center" : ""}`}
-                        >
-                            <Icon className="w-5 h-5 shrink-0" />
-                            {!isCollapsed && <span>{item.label}</span>}
+        <Sidebar collapsible="icon" className="border-r border-slate-200 dark:border-slate-800">
+            {/* Header with Gym Branding */}
+            <SidebarHeader className="border-b border-slate-200 dark:border-slate-800">
+                <SidebarMenu>
+                    <SidebarMenuItem className="cursor-pointer">
+                        <Link href="/dashboard">
+                            <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shrink-0">
+                                    <Dumbbell className="h-5 w-5" />
+                                </div>
+                                <div className="grid flex-1 text-left text-sm leading-tight truncate group-data-[collapsible=icon]:hidden">
+                                    <span className="truncate font-extrabold text-slate-900 dark:text-white">
+                                        {gymName}
+                                    </span>
+                                    <span className="truncate text-xs text-slate-500 dark:text-slate-400">
+                                        {userEmail}
+                                    </span>
+                                </div>
+                            </SidebarMenuButton>
                         </Link>
-                    )
-                })}
-            </nav>
-        </aside>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarHeader>
+
+            {/* Main Navigation Links */}
+            <SidebarContent className="py-2">
+                <SidebarMenu className="px-2 space-y-1">
+                    {navItems.map((item) => {
+                        const Icon = item.icon
+                        const isActive = pathname === item.href
+
+                        return (
+                            <SidebarMenuItem key={item.href} className="cursor-pointer">
+                                <Link href={item.href} className="flex items-center gap-3">
+                                    <SidebarMenuButton
+
+                                        isActive={isActive}
+                                        tooltip={item.label}
+                                        className={`py-5 text-sm font-semibold transition-all rounded-xl ${
+                                            isActive
+                                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-bold"
+                                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                                        }`}
+                                    >
+                                            <Icon className="h-5 w-5 shrink-0" />
+                                            <span>{item.label}</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        )
+                    })}
+                </SidebarMenu>
+            </SidebarContent>
+
+            {/* Direct Profile Info & Signout Button */}
+            <SidebarFooter className="border-t border-slate-200 dark:border-slate-800 p-2">
+                <div className="flex items-center justify-between w-full gap-2 p-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800 group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center">
+                    
+                    {/* User Info & Avatar Initials (Hidden when Sidebar is Collapsed) */}
+                    <div className="flex items-center gap-2.5 min-w-0 group-data-[collapsible=icon]:hidden">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-xs shrink-0 shadow-sm">
+                            {initials}
+                        </div>
+                        <div className="grid flex-1 text-left text-xs leading-tight truncate">
+                            <span className="truncate font-bold text-slate-900 dark:text-white">
+                                Owner
+                            </span>
+                            <span className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                                {userEmail || "owner@gym.com"}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Signout Button */}
+                    <button
+                        type="button"
+                        onClick={handleSignOut}
+                        title="Sign Out"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors shrink-0"
+                    >
+                        <LogOut className="h-4 w-4" />
+                    </button>
+                </div>
+            </SidebarFooter>
+
+            <SidebarRail />
+        </Sidebar>
     )
 }

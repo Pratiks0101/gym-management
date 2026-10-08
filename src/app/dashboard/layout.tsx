@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AppSidebar } from '@/components/AppSidebar'
 import { AppNavbar } from '@/components/AppNavbar'
+import { cookies } from 'next/headers'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
 export default async function DashboardLayout({
     children,
@@ -19,26 +21,31 @@ export default async function DashboardLayout({
     // Fetch user's Gym details
     const { data: gym } = await supabase
         .from('gyms')
-        .select('*')
+        .select('name')
         .eq('owner_id', user.id)
         .single()
 
-    const gymName = gym?.name || 'Gym Center'
+    const gymName = gym?.name || 'Gym Workspace'
+    const ownerEmail = user.email || ''
+
+    const cookieStore = await cookies()
+    const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
 
     return (
-        <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-            {/* Sidebar with Gym Name */}
-            <AppSidebar gymName={gymName} />
+        <SidebarProvider defaultOpen={defaultOpen}>
+            {/* Custom AppSidebar Component */}
+            <AppSidebar gymName={gymName} userEmail={ownerEmail} />
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                {/* Navbar with Gym Name & Owner Email */}
-                <AppNavbar gymName={gymName} ownerEmail={user.email || ''} />
-                
-                <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <SidebarInset className="bg-slate-50 dark:bg-slate-950 flex flex-col min-h-screen">
+                {/* Global Top Header / Navbar */}
+                <AppNavbar gymName={gymName} ownerEmail={ownerEmail} />
+
+                {/* Page Content */}
+                <main className="flex-1 p-4 sm:p-6 lg:p-8">
                     {children}
                 </main>
-            </div>
-        </div>
+            </SidebarInset>
+        </SidebarProvider>
     )
 }

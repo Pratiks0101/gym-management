@@ -10,11 +10,13 @@ import {
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { LogOut, Settings, User } from "lucide-react"
+import { LayoutDashboard, LogOut, Receipt, CreditCard,  User } from "lucide-react"
 import { getInitials } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { SidebarTrigger } from "@/components/ui/sidebar"
+import Link from "next/link"
 
 type NavbarProps = {
     gymName: string
@@ -34,9 +36,12 @@ export function AppNavbar({ gymName, ownerEmail }: NavbarProps) {
     const initials = getInitials(gymName)
 
     return (
-        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 flex items-center justify-between sticky top-0 z-10">
+        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-10">
 
+            {/* Left Section: Sidebar Toggle Button + Gym Title */}
             <div className="flex items-center gap-2 sm:gap-3">
+                <SidebarTrigger className="text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" />
+                
                 <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate max-w-50 sm:max-w-xs">
                     {gymName}
                 </h1>
@@ -45,8 +50,8 @@ export function AppNavbar({ gymName, ownerEmail }: NavbarProps) {
                 </span>
             </div>
 
+            {/* Right Section: Theme Toggle & User Dropdown */}
             <div className="flex items-center gap-3">
-
                 <ThemeToggle />
 
                 <DropdownMenu>
@@ -82,10 +87,24 @@ export function AppNavbar({ gymName, ownerEmail }: NavbarProps) {
                         
                         <DropdownMenuGroup>
                             <DropdownMenuItem className="cursor-pointer">
-                                <User className="w-4 h-4 mr-2" /> Profile
+                                <Link href="/dashboard" className="flex">
+                                    <LayoutDashboard className="w-4 h-4 mr-2" /> Dashboard
+                                </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer">
-                                <Settings className="w-4 h-4 mr-2" /> Gym Settings
+                                <Link href="/dashboard/members" className="flex">
+                                    <User className="w-4 h-4 mr-2" /> Members
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer">
+                                <Link href="/dashboard/payments" className="flex">
+                                    <Receipt className="w-4 h-4 mr-2" /> Payments
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer">
+                                <Link href="/dashboard/plans" className="flex">
+                                    <CreditCard className="w-4 h-4 mr-2" /> Plans
+                                </Link>
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
 

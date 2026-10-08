@@ -1,9 +1,7 @@
 'use server'
 
 import { createClient } from "@/lib/supabase/server"
-import { error } from "console"
 import { revalidatePath } from "next/cache"
-import { tr } from "zod/v4/locales"
 
 
 export async function getMembershipPlans() {
