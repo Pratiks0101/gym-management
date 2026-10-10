@@ -28,7 +28,7 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
                 let width = img.width
                 let height = img.height
 
-                if(width > height) {
+                if (width > height) {
                     if (width > maxDim) {
                         height = Math.round((height * maxDim) / width)
                         width = maxDim
@@ -45,7 +45,7 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
                 canvas.height = height
 
                 const ctx = canvas.getContext('2d')
-                if(ctx) {
+                if (ctx) {
                     ctx.drawImage(img, 0, 0, width, height)
                 }
 
@@ -60,7 +60,7 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
                     u8arr[n] = bstr.charCodeAt(n)
                 }
 
-                const blob = new Blob([u8arr], {type:mime})
+                const blob = new Blob([u8arr], { type: mime })
                 const compressedFile = new File(
                     [blob],
                     `${file.name.replace(/\.[^/.]+$/, "")}_compressed.jpg`,
@@ -81,7 +81,7 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
         try {
             const compressed = await compressImageNative(file, 800, 0.75)
 
-            if(compressed.size > 300 * 1024) {
+            if (compressed.size > 300 * 1024) {
                 alert('Image size is too large even after compression. Please select a smaller photo')
                 return
             }
@@ -102,9 +102,10 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
         setIsCameraActive(true)
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: {facingMode: 'user', width: {ideal: 640}, height: {ideal:640}} })
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } } 
+            })
             streamRef.current = stream
-            if(videoRef.current) {
+            if (videoRef.current) {
                 videoRef.current.srcObject = stream
             }
         } catch (err) {
@@ -121,12 +122,11 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
         const canvas = document.createElement('canvas')
         const size = Math.min(video.videoWidth || 640, video.videoHeight || 480)
 
-        
         canvas.width = 600
         canvas.height = 600
         const ctx = canvas.getContext('2d')
 
-        if(ctx) {
+        if (ctx) {
             const startX = (video.videoWidth - size) / 2
             const startY = (video.videoHeight - size) / 2
             ctx.drawImage(video, startX, startY, size, size, 0, 0, 600, 600)
@@ -145,8 +145,8 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
         const blob = new Blob([u8arr], { type: mime })
 
         const uniqueId = typeof crypto !== 'undefined' && crypto.randomUUID 
-                                                ? crypto.randomUUID() 
-                                                : Math.random().toString(36).substring(2)
+            ? crypto.randomUUID() 
+            : Math.random().toString(36).substring(2)
         const file = new File([blob], `capture_${uniqueId}.jpg`, { type: 'image/jpeg' })
 
         setPreview(URL.createObjectURL(file))
@@ -170,37 +170,42 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
 
     return (
         <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">Member Photo(Optional)</label>
+            <label className="block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
+                Member Photo (Optional)
+            </label>
 
             <div className="flex items-center gap-4">
-                <div className="relative w-20 h-20 rounded-full border-2 border-dashed border-gray-300 overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
+                {/* Photo Circle Avatar / Preview */}
+                <div className="relative w-20 h-20 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden bg-slate-50 dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-inner">
                     {preview ? ( 
-                            <Image 
-                                src={preview} 
-                                alt="Member preview" 
-                                fill
-                                className="object-cover" />
+                        <Image 
+                            src={preview} 
+                            alt="Member preview" 
+                            fill
+                            className="object-cover" 
+                        />
                     ) : ( 
-                        <User className="w-8 h-8 text-gray-400" />
-                    ) }
+                        <User className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+                    )}
                 </div>
 
+                {/* Upload & Camera Buttons */}
                 <div className="flex flex-wrap gap-2">
                     <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-white hover:bg-gray-50 transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all cursor-pointer shadow-sm"
                     >
-                        <Upload className="w-3.5 h-3.5 text-gray-600" />
+                        <Upload className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                         Upload File
                     </button>
 
                     <button 
                         type="button"
                         onClick={startCamera}
-                        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-white hover:bg-gray-50 transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all cursor-pointer shadow-sm"
                     >
-                        <Camera className="w-3.5 h-3.5 text-gray-600" />
+                        <Camera className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                         Take a Photo
                     </button>
 
@@ -208,7 +213,7 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
                         <button
                             type="button"
                             onClick={clearPhoto}
-                            className="flex items-center gap-1 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-colors cursor-pointer"
                         >
                             <X className="w-3.5 h-3.5" />
                             Remove
@@ -225,25 +230,30 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
                 className="hidden" 
             />
 
+            {/* Camera Capture Modal */}
             {isCameraActive && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white p-4 rounded-xl max-w-md w-full space-y-4 text-center">
-                        <h3 className="font-semibold text-gray-900">Capture Member Photo</h3>
-                        <div className="relative rounded-lg overflow-hidden bg-black aspect-square flex items-center justify-center">
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl max-w-md w-full space-y-4 text-center shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                        <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">
+                            Capture Member Photo
+                        </h3>
+                        
+                        <div className="relative rounded-xl overflow-hidden bg-slate-950 aspect-square flex items-center justify-center border border-slate-800">
                             <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
                         </div>
-                        <div className="flex justify-end gap-2">
+
+                        <div className="flex justify-end gap-3 pt-2">
                             <button
                                 type="button"
                                 onClick={stopCamera}
-                                className="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-100 cursor-pointer"
+                                className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="button"
                                 onClick={capturePhoto}
-                                className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 cursor-pointer"
+                                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-colors cursor-pointer"
                             >
                                 Capture
                             </button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { Calendar } from '@/components/ui/calendar'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
@@ -8,78 +8,113 @@ import { Calendar as CalendarIcon, UserCheck, IndianRupee, Clock, Loader2 } from
 
 type AttendanceRecord = {
     id: string
-    created_at: string
-    members?: { full_name: string }
+    check_in_time: string
+    member_id?: string
+    members?: { full_name: string } | null
 }
 
 type PaymentRecord = {
     id: string
     amount_paid: number
-    payment_mode?: string
+    payment_method: string
     created_at: string
-    members?: { full_name: string }
+    member_id?: string
+    members?: { full_name: string } | null
 }
+
+const calenderCache = new Map<string, {attendance: AttendanceRecord[], payments: PaymentRecord[]}>()
 
 export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
     const [mounted, setMounted] = useState(false)
     const [selectedDate, setSelectedDate] = useState<Date>(new Date())
     const [loading, setLoading] = useState(false)
+    const [isPending, startTransition] = useTransition()
     const [attendances, setAttendances] = useState<AttendanceRecord[]>([])
     const [payments, setPayments] = useState<PaymentRecord[]>([])
 
-    // 1. First mount logic
     useEffect(() => {
         setMounted(true)
     }, [])
 
-    // 2. Fetch data logic with stable dependencies
     useEffect(() => {
         if (!gymId || !selectedDate) return
+
+        const cacheKey = `${gymId}_${format(selectedDate, 'yyyy-MM-dd')}`
+
+        if(calenderCache.has(cacheKey)) {
+            const cached = calenderCache.get(cacheKey)!
+            setAttendances(cached.attendance)
+            setPayments(cached.payments)
+            return
+        }
 
         const supabase = createClient()
 
         async function fetchDateDetails() {
             setLoading(true)
 
-            const startOfDay = new Date(selectedDate)
-            startOfDay.setHours(0, 0, 0, 0)
+            // Calculate precise local start and end of day
+            const year = selectedDate.getFullYear()
+            const month = selectedDate.getMonth()
+            const date = selectedDate.getDate()
 
-            const endOfDay = new Date(selectedDate)
-            endOfDay.setHours(23, 59, 59, 999)
+            const startOfDay = new Date(year, month, date, 0, 0, 0, 0).toISOString()
+            const endOfDay = new Date(year, month, date, 23, 59, 59, 999).toISOString()
 
-            const { data: attData } = await supabase
-                .from('attendance')
-                .select('id, created_at, members(full_name)')
-                .eq('gym_id', gymId)
-                .gte('created_at', startOfDay.toISOString())
-                .lte('created_at', endOfDay.toISOString())
-                .order('created_at', { ascending: false })
+            try {
+                // 1. Fetch Attendance (With fallback join handling)
+                const [ attData, payData ] = await Promise.all([
+                    supabase
+                        .from('attendance')
+                        .select('id, check_in_time, member_id, members(full_name)')
+                        .eq('gym_id', gymId)
+                        .gte('check_in_time', startOfDay)
+                        .lte('check_in_time', endOfDay)
+                        .order('check_in_time', { ascending: false }),
 
-            const { data: payData } = await supabase
-                .from('payments')
-                .select('id, amount_paid, payment_mode, created_at, members(full_name)')
-                .eq('gym_id', gymId)
-                .gte('created_at', startOfDay.toISOString())
-                .lte('created_at', endOfDay.toISOString())
-                .order('created_at', { ascending: false })
+                    supabase
+                        .from('payments')
+                        .select('id, amount_paid, payment_method, created_at, member_id, members(full_name)')
+                        .eq('gym_id', gymId)
+                        .gte('created_at', startOfDay)
+                        .lte('created_at', endOfDay)
+                        .order('created_at', { ascending: false })
+                    ])
 
-            setAttendances((attData as any) || [])
-            setPayments((payData as any) || [])
-            setLoading(false)
+                    const fetchedAtt = (attData.data as any) || []
+                    const fetchedPay = (payData.data as any) || []
+
+                    calenderCache.set(cacheKey, {attendance: fetchedAtt, payments: fetchedPay})
+
+                    setAttendances(fetchedAtt)
+                    setPayments(fetchedPay)
+            } catch (err) {
+                console.error("Calender fetch error:", err)
+            } finally {
+                setLoading(false)
+            }
         }
 
         fetchDateDetails()
-    }, [selectedDate, gymId]) // Stable 2-item dependency array
+    }, [selectedDate, gymId])
+
+    const handleDateSelect = (date: Date | undefined) => {
+        if(!date) return
+        startTransition(() => {
+            setSelectedDate(date)
+        })
+    }
 
     if (!mounted) {
         return (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 h-[400px] flex items-center justify-center">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 h-100 flex items-center justify-center">
                 <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
             </div>
         )
     }
 
     const totalCollected = payments.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0)
+    const isFetching = loading || isPending
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-5">
@@ -88,17 +123,20 @@ export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
                     <CalendarIcon className="w-5 h-5 text-emerald-500" />
                     Daily Operations Calendar
                 </h2>
+                {isFetching && <Loader2 className='w-4 h-4 animate-spin text-emerald-500' />}
             </div>
 
+            {/* Calendar */}
             <div className="flex justify-center bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-100 dark:border-slate-800">
                 <Calendar
                     mode="single"
                     selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
+                    onSelect={handleDateSelect}
                     className="rounded-md"
                 />
             </div>
 
+            {/* Daily Snapshot Header */}
             <div className="bg-emerald-50/60 dark:bg-emerald-950/40 p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-900/60 flex items-center justify-between">
                 <div>
                     <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
@@ -110,12 +148,13 @@ export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
                 </div>
             </div>
 
-            {loading ? (
+            {isFetching ? (
                 <div className="py-8 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
                     <Loader2 className="w-4 h-4 animate-spin text-emerald-600" /> Loading date records...
                 </div>
             ) : (
                 <div className="space-y-4">
+                    {/* Check-ins List */}
                     <div>
                         <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                             <UserCheck className="w-3.5 h-3.5 text-purple-500" /> Check-ins ({attendances.length})
@@ -130,7 +169,7 @@ export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
                                             {att.members?.full_name || 'Member'}
                                         </span>
                                         <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                                            <Clock className="w-3 h-3" /> {format(new Date(att.created_at), 'hh:mm a')}
+                                            <Clock className="w-3 h-3" /> {format(new Date(att.check_in_time), 'hh:mm a')}
                                         </span>
                                     </div>
                                 ))}
@@ -138,6 +177,7 @@ export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
                         )}
                     </div>
 
+                    {/* Payments Received List */}
                     <div>
                         <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                             <IndianRupee className="w-3.5 h-3.5 text-emerald-500" /> Payments Received ({payments.length})
@@ -152,12 +192,12 @@ export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
                                             <p className="font-semibold text-slate-800 dark:text-slate-200">
                                                 {p.members?.full_name || 'Member'}
                                             </p>
-                                            {p.payment_mode && (
-                                                <p className="text-[10px] text-slate-400 uppercase">{p.payment_mode}</p>
-                                            )}
+                                            <p className="text-[10px] text-slate-400 font-medium uppercase">
+                                                {p.payment_method || 'UPI'}
+                                            </p>
                                         </div>
                                         <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                                            +₹{p.amount_paid}
+                                            +₹{Number(p.amount_paid || 0).toLocaleString('en-IN')}
                                         </span>
                                     </div>
                                 ))}

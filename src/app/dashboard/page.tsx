@@ -1,9 +1,11 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Sparkles, UserCheck } from 'lucide-react'
+import { getExpiringSubscriptions, getPendingDues } from '../actions/whatsapp'
 
-// Imported Components
+// UI Components & Skeletons
 import { TodayAttendanceWidget } from '@/components/dashboard/TodayAttendaceWidget'
 import { KpiStatsCards } from '@/components/dashboard/KpiStatsCards'
 import { ExpiringSubscriptionsWidget } from '@/components/dashboard/ExpiringSubscriptionsWidget'
@@ -11,84 +13,79 @@ import { RecentTransactionsWidget } from '@/components/dashboard/RecentTransacti
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts'
 import { InteractiveCalendarWidget } from '@/components/dashboard/InteractiveCalendarWidget'
 import { WeeklyAttendanceChart } from '@/components/dashboard/WeeklyAttendanceChart'
+import { PendingDuesCard } from '@/components/dashboard/PendingDuesCard'
+import { KpiCardsSkeleton, WidgetSkeleton } from '@/components/dashboard/Skeletons'
 
+// Async Section Components for Independent Streaming
+async function KpiSection({ gymId }: { gymId: string }) {
+    const supabase = await createClient()
+
+    // Local Timezone Boundaries
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString()
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).toISOString()
+
+    const [
+        { count: activeMembersCount },
+        { count: todayAttendanceCount },
+        { data: monthlyPayments },
+        pendingDues
+    ] = await Promise.all([
+        supabase.from('members').select('*', { count: 'exact', head: true }).eq('gym_id', gymId),
+        supabase.from('attendance').select('*', { count: 'exact', head: true }).eq('gym_id', gymId).gte('check_in_time', todayStart),
+        supabase.from('payments').select('amount_paid').eq('gym_id', gymId).gte('created_at', firstDayOfMonth),
+        getPendingDues(gymId)
+    ])
+
+    const totalMonthlyRevenue = monthlyPayments?.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0) || 0
+    const totalPendingDues = pendingDues.reduce((sum, sub) => sum + Number(sub.due_amount || 0), 0)
+
+    return (
+        <KpiStatsCards 
+            totalActive={activeMembersCount || 0} 
+            totalMonthlyRevenue={totalMonthlyRevenue} 
+            todayCount={todayAttendanceCount || 0} 
+            totalPendingDues={totalPendingDues} 
+        />
+    )
+}
+
+async function ExpiringSection({ gymId, gymName }: { gymId: string, gymName: string }) {
+    const expiringSoon = await getExpiringSubscriptions(gymId)
+    return <ExpiringSubscriptionsWidget expiringSoon={expiringSoon} gymName={gymName} />
+}
+
+async function PendingDuesSection({ gymId, gymName }: { gymId: string, gymName: string }) {
+    const pendingDues = await getPendingDues(gymId)
+    return <PendingDuesCard pendingDues={pendingDues} gymName={gymName} />
+}
+
+async function RecentPaymentsSection({ gymId }: { gymId: string }) {
+    const supabase = await createClient()
+    const { data: recentPayments } = await supabase
+        .from('payments')
+        .select('*, members(full_name)')
+        .eq('gym_id', gymId)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+    return <RecentTransactionsWidget recentPayments={recentPayments} />
+}
+
+// Main Dashboard Page
 export default async function DashboardPage() {
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect('/login')
 
-    // 1. Gym Details
     const { data: gym } = await supabase
         .from('gyms')
-        .select('*')
+        .select('id, name')
         .eq('owner_id', user.id)
         .single()
 
     if (!gym) redirect('/login')
-
-    // 2. Active Members
-    const { count: activeMembersCount } = await supabase
-        .from('members')
-        .select('*', { count: 'exact', head: true })
-        .eq('gym_id', gym.id)
-
-    // 3. Today's Attendance
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
-    
-    const { count: todayAttendanceCount } = await supabase
-        .from('attendance')
-        .select('*', { count: 'exact', head: true })
-        .eq('gym_id', gym.id)
-        .gte('created_at', todayStart.toISOString())
-
-    // 4. Monthly Revenue
-    const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-    const { data: monthlyPayments } = await supabase
-        .from('payments')
-        .select('amount')
-        .eq('gym_id', gym.id)
-        .gte('created_at', firstDayOfMonth)
-
-    const totalMonthlyRevenue = monthlyPayments?.reduce((sum, p) => sum + Number(p.amount || 0), 0) || 0
-
-    // 5. Subscriptions & Pending Dues
-    const next7Days = new Date()
-    next7Days.setDate(next7Days.getDate() + 7)
-
-    const { data: subscriptions } = await supabase
-        .from('subscriptions')
-        .select('*, members(full_name, phone, photo_url), membership_plans(plan_name)')
-        .eq('gym_id', gym.id)
-
-    let totalPendingDues = 0
-    const expiringSoon: any[] = []
-    const now = new Date()
-
-    subscriptions?.forEach((sub) => {
-        if (Number(sub.due_amount) > 0) {
-            totalPendingDues += Number(sub.due_amount)
-        }
-
-        if (sub.end_date) {
-            const endDate = new Date(sub.end_date)
-            if (endDate >= now && endDate <= next7Days) {
-                expiringSoon.push(sub)
-            }
-        }
-    })
-
-    // 6. Recent Payments
-    const { data: recentPayments } = await supabase
-        .from('payments')
-        .select('*, members(full_name)')
-        .eq('gym_id', gym.id)
-        .order('created_at', { ascending: false })
-        .limit(5)
-
-    const totalActive = activeMembersCount || 0
-    const todayCount = todayAttendanceCount || 0
 
     const monthlyRevenueTrendData = [
         { month: 'May', revenue: 15000 },
@@ -101,7 +98,7 @@ export default async function DashboardPage() {
 
     return (
         <div className="space-y-8 max-w-7xl mx-auto p-2 sm:p-6">
-            {/* Header Greeting */}
+            {/* Header (Instant Render - 0ms Delay) */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -123,41 +120,42 @@ export default async function DashboardPage() {
                 </div>
             </div>
 
-            {/* KPI Cards */}
-            <KpiStatsCards 
-                totalActive={totalActive} 
-                totalMonthlyRevenue={totalMonthlyRevenue} 
-                todayCount={todayCount} 
-                totalPendingDues={totalPendingDues} 
-            />
+            {/* KPI Cards (Streamed in Suspense) */}
+            <Suspense fallback={<KpiCardsSkeleton />}>
+                <KpiSection gymId={gym.id} />
+            </Suspense>
 
-            {/* Operational Layout */}
+            {/* Layout Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Section (Charts + Attendance + Expiring) */}
+                {/* Left Column */}
                 <div className="lg:col-span-2 space-y-8">
-                    {/* Yaha shadcn Charts integrate honge */}
-                    {/* <DashboardCharts data={monthlyPayments} /> */}
                     <DashboardCharts data={monthlyRevenueTrendData} />
+                    
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 my-6">
-                    {/* Today's Attendance Radial Arc */}
                         <div className="lg:col-span-5">
                             <TodayAttendanceWidget todayCount={38} expectedCount={60} />
-                            {/* <TodayAttendanceWidget todayCount={todayCount} expectedCount={totalActive} /> */}
                         </div>
-
-                        {/* Weekly Mon-Sat Footfall Bar Chart */}
                         <div className="lg:col-span-7">
                             <WeeklyAttendanceChart />
                         </div>
                     </div>
-                    <ExpiringSubscriptionsWidget expiringSoon={expiringSoon} />
+
+                    <Suspense fallback={<WidgetSkeleton />}>
+                        <ExpiringSection gymId={gym.id} gymName={gym.name} />
+                    </Suspense>
+
+                    <Suspense fallback={<WidgetSkeleton />}>
+                        <PendingDuesSection gymId={gym.id} gymName={gym.name} />
+                    </Suspense>
                 </div>
 
-                {/* Right Section (Calendar + Recent Payments) */}
+                {/* Right Column */}
                 <div className="space-y-8">
-                    {/* Yaha Interactive Calendar & Daily Drilldown Log component aayega */}
                     <InteractiveCalendarWidget gymId={gym.id} />
-                    <RecentTransactionsWidget recentPayments={recentPayments} />
+                    
+                    <Suspense fallback={<WidgetSkeleton />}>
+                        <RecentPaymentsSection gymId={gym.id} />
+                    </Suspense>
                 </div>
             </div>
         </div>

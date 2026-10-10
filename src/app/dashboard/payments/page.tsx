@@ -1,29 +1,3 @@
-// import { getPaymentLogs } from "@/app/actions/payments"
-// import PaymentSort from "@/components/PaymentSort" 
-
-// export default async function PaymentsPage() {
-//     const { data: payments = [], error } = await getPaymentLogs()
-
-//     if (error) {
-//         console.error("Payment logs load error:", error)
-//     }
-
-//     return (
-//         <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
-//             {/* Header Section */}
-//             <div>
-//                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">Payment Logs</h1>
-//                 <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
-//                     Real-time statement of all incoming membership payments.
-//                 </p>
-//             </div>
-
-//             {/* Filtered Content Component */}
-//             <PaymentSort initialPayments={payments} />
-//         </div>
-//     )
-// }
-
 import { getPaymentLogs } from "@/app/actions/payments"
 import PaymentSort from "@/components/PaymentSort" 
 

@@ -197,9 +197,9 @@ export async function getMembers() {
 
     const sortedMembers = (members || []).map((member: any) => {
         const subscriptions = member.subscriptions ? [...member.subscriptions] : []
-        // if(member.subscriptions && member.subscriptions.length > 0) {
-            subscriptions.sort((a: any, b: any) => new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime())
-        // }
+
+        subscriptions.sort((a: any, b: any) => new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime())
+
         return {
             ...member,
             subscriptions
@@ -329,6 +329,17 @@ export async function renewMemberSubscription(formData: FormData) {
     const endDd = String(endDateObj.getDate()).padStart(2, '0')
     const endDate = `${endYyyy}-${endMm}-${endDd}`
 
+    const { error: updateOldSubError } = await supabase
+        .from('subscriptions')
+        .update({status: 'expired'})
+        .eq('member_id', memberId)
+        .eq('gym_id', gym.id)
+        .eq('status', 'active')
+
+    if(updateOldSubError) {
+        console.error("Error updating previous subscription status:", updateOldSubError)
+    }
+
     const {data: subscription, error: subError } = await supabase
         .from('subscriptions')
         .insert({
@@ -371,6 +382,7 @@ export async function renewMemberSubscription(formData: FormData) {
         }
     }
 
+    revalidatePath('/dashboard')
     revalidatePath('/dashboard/members')
     revalidatePath('/dashboard/payments')
     return {success: true}
@@ -393,7 +405,7 @@ export async function clearMemberDue(formData: FormData) {
     const subscriptionId = formData.get('subscription_id') as string
     const memberId = formData.get('member_id') as string
     const amountPaying = Number(formData.get('amount_paid') || 0)
-    const paymentMethod = (formData.get('payment_method') as string) || 'upi'
+    const paymentMethod = ((formData.get('payment_method') as string) || 'upi').toLowerCase()
 
     if(!subscriptionId || !memberId) {
         throw new Error("Missing required parameters for clearing due")
@@ -448,6 +460,7 @@ export async function clearMemberDue(formData: FormData) {
             }
     }
 
+    revalidatePath('/dashboard')
     revalidatePath('/dashboard/members')
     revalidatePath('/dashboard/payments')
     return { success: true }

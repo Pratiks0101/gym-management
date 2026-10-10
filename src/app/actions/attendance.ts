@@ -211,6 +211,5 @@ export async function processManualCheckIn({ gymId, memberId }: { gymId: string;
         return { success: false, message: 'Failed to record attendance.' }
     }
 
-    // revalidatePath('/dashboard/attendance')
     return { success: true, message: `Manual check-in logged for ${member.full_name}` }
 }
