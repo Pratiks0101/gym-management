@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
 
 export type ExpiringMember = {
     id: string
@@ -19,9 +18,7 @@ export type PendingDueMember = {
     plan_name: string
 }
 
-
 // Fetch members whose subscription expires in next N days (Default: 7 days)
-
 export async function getExpiringSubscriptions(gymId: string, daysAhead: number = 7) {
     const supabase = await createClient()
 
@@ -30,7 +27,7 @@ export async function getExpiringSubscriptions(gymId: string, daysAhead: number 
     targetDate.setDate(new Date().getDate() + daysAhead)
     const next7Days = targetDate.toISOString().split('T')[0]
 
-// Fetch active subscriptions ending in next 7 days
+    // Fetch active subscriptions ending in next 7 days
     const { data, error } = await supabase
         .from('subscriptions')
         .select(`
@@ -56,27 +53,26 @@ export async function getExpiringSubscriptions(gymId: string, daysAhead: number 
     const memberLatestMap = new Map<string, any>()
 
     for (const sub of data) {
-        const memberId = sub.members.id
-        if(!memberLatestMap.has(memberId)) {
-            memberLatestMap.set(memberId, sub)
+        const memberObj = Array.isArray(sub.members) ? sub.members[0] : sub.members
+        const memberId = memberObj?.id
+        if(memberId && !memberLatestMap.has(memberId)) {
+            memberLatestMap.set(memberId, { ...sub, memberObj })
         }
     }
 
     const filteredSubs = Array.from(memberLatestMap.values())
 
     return filteredSubs.map((sub: any) => ({
-        id: sub.members.id,
-        full_name: sub.members.full_name,
-        phone: sub.members.phone,
-        plan_name: sub.membership_plans?.plan_name || 'General Plan',
+        id: sub.memberObj.id,
+        full_name: sub.memberObj.full_name,
+        phone: sub.memberObj.phone,
+        plan_name: (Array.isArray(sub.membership_plans) ? sub.membership_plans[0]?.plan_name : sub.membership_plans?.plan_name) || 'General Plan',
         end_date: sub.end_date,
-        members: sub.members
+        members: sub.memberObj
     })) as ExpiringMember[]
 }
 
-
 // Fetch members with pending due amount > 0
-
 export async function getPendingDues(gymId: string) {
     const supabase = await createClient()
 
@@ -98,13 +94,17 @@ export async function getPendingDues(gymId: string) {
         return []
     }
 
-    return (data || []).map((sub: any) => ({
-        id: sub.id,
-        member_id: sub.member_id || sub.members.id,
-        full_name: sub.members?.full_name,
-        phone: sub.members?.phone,
-        plan_name: sub.membership_plans?.plan_name || 'General Plan',
-        due_amount: sub.due_amount,
-        members: sub.members
-    })) as PendingDueMember[]
+    return (data || []).map((sub: any) => {
+        const memberObj = Array.isArray(sub.members) ? sub.members[0] : sub.members
+        const planObj = Array.isArray(sub.membership_plans) ? sub.membership_plans[0] : sub.membership_plans
+        return {
+            id: sub.id,
+            member_id: sub.member_id || memberObj?.id,
+            full_name: memberObj?.full_name,
+            phone: memberObj?.phone,
+            plan_name: planObj?.plan_name || 'General Plan',
+            due_amount: sub.due_amount,
+            members: memberObj
+        }
+    }) as PendingDueMember[]
 }

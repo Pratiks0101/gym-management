@@ -50,9 +50,8 @@ async function KpiSection({ gymId }: { gymId: string }) {
     )
 }
 
-// 🟢 NEW: Charts Async Section (Fetches Real or Dummy Data)
+// 🟢 Charts Async Section
 async function ChartsSection({ gymId }: { gymId: string }) {
-    // 💡 Tip: Set second parameter to 'true' if you want to force Dummy Data
     const USE_DUMMY_DATA = false 
 
     const supabase = await createClient()
@@ -64,13 +63,13 @@ async function ChartsSection({ gymId }: { gymId: string }) {
     ])
 
     const activeMembersCount = activeMemvbersRes.count || 0
-    const todayCount = weeklyAttendanceData[weeklyAttendanceData.length - 1]?.count || 0
+    const lastDayItem = weeklyAttendanceData[weeklyAttendanceData.length - 1] as any
+    const todayCount = lastDayItem?.total ?? lastDayItem?.count ?? 0
 
     const dynamicExpectedCount = activeMembersCount && activeMembersCount > 0 ? activeMembersCount : 10
 
     return (
         <div className="space-y-8">
-            {/* Revenue Trend Line Chart */}
             <DashboardCharts data={revenueData} />
             
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 my-6">
@@ -78,7 +77,6 @@ async function ChartsSection({ gymId }: { gymId: string }) {
                     <TodayAttendanceWidget todayCount={todayCount} expectedCount={dynamicExpectedCount} />
                 </div>
                 <div className="lg:col-span-7">
-                    {/* Weekly Footfall Bar Chart */}
                     <WeeklyAttendanceChart data={weeklyAttendanceData} />
                 </div>
             </div>
@@ -105,7 +103,7 @@ async function RecentPaymentsSection({ gymId }: { gymId: string }) {
         .order('created_at', { ascending: false })
         .limit(5)
 
-    return <RecentTransactionsWidget recentPayments={recentPayments} />
+    return <RecentTransactionsWidget recentPayments={recentPayments || []} />
 }
 
 // Main Dashboard Page
@@ -125,7 +123,6 @@ export default async function DashboardPage() {
 
     return (
         <div className="space-y-8 max-w-7xl mx-auto p-2 sm:p-6">
-            {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -147,16 +144,12 @@ export default async function DashboardPage() {
                 </div>
             </div>
 
-            {/* KPI Cards */}
             <Suspense fallback={<KpiCardsSkeleton />}>
                 <KpiSection gymId={gym.id} />
             </Suspense>
 
-            {/* Layout Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column (Charts & Subscriptions) */}
                 <div className="lg:col-span-2 space-y-8">
-                    {/* Real / Dummy Charts Streamed Together */}
                     <Suspense fallback={<WidgetSkeleton />}>
                         <ChartsSection gymId={gym.id} />
                     </Suspense>
@@ -170,7 +163,6 @@ export default async function DashboardPage() {
                     </Suspense>
                 </div>
 
-                {/* Right Column (Calendar & Recent Payments) */}
                 <div className="space-y-8">
                     <InteractiveCalendarWidget gymId={gym.id} />
                     

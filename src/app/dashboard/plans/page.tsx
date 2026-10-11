@@ -23,7 +23,13 @@ export default async function PlansPage() {
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm h-fit">
                     <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Add new plan</h2>
 
-                    <form action={createMembershipPlan} className="space-y-4">
+                    <form 
+                        action={async (FormData) => {
+                            'use server'
+                            await createMembershipPlan(FormData)
+                        }} 
+                        className="space-y-4"
+                    >
                         <div>
                             <label htmlFor="name" className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                                 Plan Name

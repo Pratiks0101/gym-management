@@ -59,7 +59,7 @@ export function PendingDuesCard({ pendingDues, gymName = 'Gym' }: Props) {
                 await router.refresh() // Soft refresh dashboard data instantly
                 setSelectedItem(null)
             } else {
-                alert(res?.error || "Failed to clear due amount.")
+                alert("Failed to clear due amount.")
             }
         } catch (err: any) {
             alert(err.message || "Failed to clear due amount.")
