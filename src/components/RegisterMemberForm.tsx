@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import PhotoUpload from "./PhotoUpload"
 import { addMember } from "@/app/actions/members"
+import { Loader2 } from "lucide-react"
 
 type RegisterMemberFormProp = {
     plans: any[]
@@ -268,7 +269,16 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
                 disabled={loading}
                 className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
             >
-                {loading ? 'Registering...' : 'Register Member'}
+                {loading 
+                    ? (
+                        <> 
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Registering...</span> 
+                        </>
+                        )
+                    :(
+                        <span>Register Member</span>
+                    )}
             </button>
         </form>
     )

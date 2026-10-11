@@ -19,7 +19,7 @@ type Props = {
     expectedCount?: number
 }
 
-export function TodayAttendanceWidget({ todayCount = 0, expectedCount = 100 }: Props) {
+export function TodayAttendanceWidget({ todayCount = 0, expectedCount = 10 }: Props) {
     const validExpected = expectedCount > 0 ? expectedCount : 1
     const percentage = Math.min(Math.round((todayCount / validExpected) * 100), 100)
 
@@ -32,7 +32,7 @@ export function TodayAttendanceWidget({ todayCount = 0, expectedCount = 100 }: P
     ]
 
     return (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs flex flex-col justify-between h-full">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -43,12 +43,12 @@ export function TodayAttendanceWidget({ todayCount = 0, expectedCount = 100 }: P
                         <h3 className="font-bold text-slate-900 dark:text-white text-sm">
                             Today&apos;s Attendance
                         </h3>
-                        <p className="text-xs text-slate-500">Live check-ins summary</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Live check-ins summary</p>
                     </div>
                 </div>
                 <Link
                     href="/dashboard/attendance"
-                    className="text-xs font-semibold text-emerald-600 hover:underline flex items-center gap-0.5"
+                    className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
                 >
                     Scanner <ArrowUpRight className="w-3.5 h-3.5" />
                 </Link>
@@ -86,17 +86,17 @@ export function TodayAttendanceWidget({ todayCount = 0, expectedCount = 100 }: P
                     <span className="text-3xl font-black text-slate-900 dark:text-white leading-none">
                         {todayCount}
                     </span>
-                    <span className="text-[11px] font-semibold text-slate-400 mt-1">
-                        / {expectedCount} Expected
+                    <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mt-1">
+                        / {expectedCount} Registered
                     </span>
                     <span className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
-                        {percentage}% Goal
+                        {percentage}% Turnout
                     </span>
                 </div>
             </div>
 
             {/* Footer Metrics */}
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                 <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                     <span>QR Scanner Active</span>

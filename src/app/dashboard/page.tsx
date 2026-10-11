@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Sparkles, UserCheck } from 'lucide-react'
 import { getExpiringSubscriptions, getPendingDues } from '../actions/whatsapp'
+import { getMonthlyRevenueTrend, getWeeklyAttendanceTrend } from '../actions/charts'
 
 // UI Components & Skeletons
 import { TodayAttendanceWidget } from '@/components/dashboard/TodayAttendaceWidget'
@@ -16,11 +17,10 @@ import { WeeklyAttendanceChart } from '@/components/dashboard/WeeklyAttendanceCh
 import { PendingDuesCard } from '@/components/dashboard/PendingDuesCard'
 import { KpiCardsSkeleton, WidgetSkeleton } from '@/components/dashboard/Skeletons'
 
-// Async Section Components for Independent Streaming
+// Async KPI Section Component
 async function KpiSection({ gymId }: { gymId: string }) {
     const supabase = await createClient()
 
-    // Local Timezone Boundaries
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString()
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).toISOString()
@@ -47,6 +47,42 @@ async function KpiSection({ gymId }: { gymId: string }) {
             todayCount={todayAttendanceCount || 0} 
             totalPendingDues={totalPendingDues} 
         />
+    )
+}
+
+// 🟢 NEW: Charts Async Section (Fetches Real or Dummy Data)
+async function ChartsSection({ gymId }: { gymId: string }) {
+    // 💡 Tip: Set second parameter to 'true' if you want to force Dummy Data
+    const USE_DUMMY_DATA = false 
+
+    const supabase = await createClient()
+
+    const [revenueData, weeklyAttendanceData, activeMemvbersRes] = await Promise.all([
+        getMonthlyRevenueTrend(gymId, USE_DUMMY_DATA),
+        getWeeklyAttendanceTrend(gymId, USE_DUMMY_DATA),
+        supabase.from('members').select('*', {count: 'exact', head: true}).eq('gym_id', gymId)
+    ])
+
+    const activeMembersCount = activeMemvbersRes.count || 0
+    const todayCount = weeklyAttendanceData[weeklyAttendanceData.length - 1]?.count || 0
+
+    const dynamicExpectedCount = activeMembersCount && activeMembersCount > 0 ? activeMembersCount : 10
+
+    return (
+        <div className="space-y-8">
+            {/* Revenue Trend Line Chart */}
+            <DashboardCharts data={revenueData} />
+            
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 my-6">
+                <div className="lg:col-span-5">
+                    <TodayAttendanceWidget todayCount={todayCount} expectedCount={dynamicExpectedCount} />
+                </div>
+                <div className="lg:col-span-7">
+                    {/* Weekly Footfall Bar Chart */}
+                    <WeeklyAttendanceChart data={weeklyAttendanceData} />
+                </div>
+            </div>
+        </div>
     )
 }
 
@@ -87,18 +123,9 @@ export default async function DashboardPage() {
 
     if (!gym) redirect('/login')
 
-    const monthlyRevenueTrendData = [
-        { month: 'May', revenue: 15000 },
-        { month: 'Jun', revenue: 22000 },
-        { month: 'Jul', revenue: 18000 },
-        { month: 'Aug', revenue: 28000 },
-        { month: 'Sep', revenue: 35000 },
-        { month: 'Oct', revenue: 42000 },
-    ]
-
     return (
         <div className="space-y-8 max-w-7xl mx-auto p-2 sm:p-6">
-            {/* Header (Instant Render - 0ms Delay) */}
+            {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -120,25 +147,19 @@ export default async function DashboardPage() {
                 </div>
             </div>
 
-            {/* KPI Cards (Streamed in Suspense) */}
+            {/* KPI Cards */}
             <Suspense fallback={<KpiCardsSkeleton />}>
                 <KpiSection gymId={gym.id} />
             </Suspense>
 
             {/* Layout Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column */}
+                {/* Left Column (Charts & Subscriptions) */}
                 <div className="lg:col-span-2 space-y-8">
-                    <DashboardCharts data={monthlyRevenueTrendData} />
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 my-6">
-                        <div className="lg:col-span-5">
-                            <TodayAttendanceWidget todayCount={38} expectedCount={60} />
-                        </div>
-                        <div className="lg:col-span-7">
-                            <WeeklyAttendanceChart />
-                        </div>
-                    </div>
+                    {/* Real / Dummy Charts Streamed Together */}
+                    <Suspense fallback={<WidgetSkeleton />}>
+                        <ChartsSection gymId={gym.id} />
+                    </Suspense>
 
                     <Suspense fallback={<WidgetSkeleton />}>
                         <ExpiringSection gymId={gym.id} gymName={gym.name} />
@@ -149,7 +170,7 @@ export default async function DashboardPage() {
                     </Suspense>
                 </div>
 
-                {/* Right Column */}
+                {/* Right Column (Calendar & Recent Payments) */}
                 <div className="space-y-8">
                     <InteractiveCalendarWidget gymId={gym.id} />
                     

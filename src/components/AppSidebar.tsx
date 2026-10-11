@@ -81,23 +81,26 @@ export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
                 <SidebarMenu className="px-2 space-y-1">
                     {navItems.map((item) => {
                         const Icon = item.icon
-                        const isActive = pathname === item.href
+                        
+                        // 🟢 Smart Path Matching Fix
+                        const isActive = item.href === "/dashboard" 
+                            ? pathname === "/dashboard"
+                            : pathname.startsWith(item.href)
 
                         return (
                             <SidebarMenuItem key={item.href} className="cursor-pointer">
-                                <Link href={item.href} className="flex items-center gap-3">
+                                <Link href={item.href} className="w-full">
                                     <SidebarMenuButton
-
                                         isActive={isActive}
                                         tooltip={item.label}
-                                        className={`py-5 text-sm font-semibold transition-all rounded-xl ${
+                                        className={`w-full flex items-center gap-3 px-3 py-5 text-sm transition-all rounded-xl cursor-pointer ${
                                             isActive
-                                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-bold"
-                                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                                                ? "bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400 font-bold border-r-4 border-emerald-600 shadow-xs text-xl uppercase"
+                                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium"
                                         }`}
                                     >
-                                            <Icon className="h-5 w-5 shrink-0" />
-                                            <span>{item.label}</span>
+                                        <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500 dark:text-slate-400"}`} />
+                                        <span>{item.label}</span>
                                     </SidebarMenuButton>
                                 </Link>
                             </SidebarMenuItem>
@@ -110,9 +113,9 @@ export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
             <SidebarFooter className="border-t border-slate-200 dark:border-slate-800 p-2">
                 <div className="flex items-center justify-between w-full gap-2 p-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800 group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center">
                     
-                    {/* User Info & Avatar Initials (Hidden when Sidebar is Collapsed) */}
+                    {/* User Info & Avatar Initials */}
                     <div className="flex items-center gap-2.5 min-w-0 group-data-[collapsible=icon]:hidden">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-xs shrink-0 shadow-sm">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-xs shrink-0 shadow-xs">
                             {initials}
                         </div>
                         <div className="grid flex-1 text-left text-xs leading-tight truncate">
@@ -130,7 +133,7 @@ export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
                         type="button"
                         onClick={handleSignOut}
                         title="Sign Out"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors shrink-0"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors shrink-0 cursor-pointer"
                     >
                         <LogOut className="h-4 w-4" />
                     </button>

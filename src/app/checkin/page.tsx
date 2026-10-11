@@ -24,7 +24,7 @@ export default function MobileCheckInPage() {
         }
     }, [])
 
-    async function handleCheckIn(e: React.FormEvent) { // ✅ Fixed Event Type
+    async function handleCheckIn(e: React.SubmitEvent) {
         e.preventDefault()
         e.stopPropagation()
 

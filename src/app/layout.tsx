@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/ThemeProvider"
+import NextTopLoader from 'nextjs-toploader'
 import "./globals.css"
 
 const inter = Inter({ 
@@ -34,6 +35,17 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
+        <NextTopLoader 
+          color="#10b981"
+          initialPosition={0.08}
+          crawlSpeed={200}
+          height={3}
+          crawl={true}
+          showSpinner={false}
+          easing="ease"
+          speed={200}
+        />
+        
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
