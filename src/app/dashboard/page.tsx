@@ -52,7 +52,7 @@ async function KpiSection({ gymId }: { gymId: string }) {
 
 // 🟢 Charts Async Section
 async function ChartsSection({ gymId }: { gymId: string }) {
-    const USE_DUMMY_DATA = false 
+    const USE_DUMMY_DATA = true 
 
     const supabase = await createClient()
 
