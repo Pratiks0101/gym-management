@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { login } from "../auth/actions";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { LoginForm } from "@/components/auth/LoginForm";
 
 export default async function LoginPage({searchParams}:{
     searchParams: Promise<{ error?: string}>
@@ -11,8 +9,8 @@ export default async function LoginPage({searchParams}:{
     const { error } = await searchParams
     
     return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-            <Card className="w-full max-w-md shadow-lg">
+        <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+            <Card className="w-full max-w-md shadow-lg border-slate-200 dark:border-slate-800">
                 <CardHeader className="space-y-1 text-center">
                     <CardTitle className="text-2xl font-bold">Gym Owner Login</CardTitle>
                     <CardDescription>
@@ -26,32 +24,8 @@ export default async function LoginPage({searchParams}:{
                         </div>
                     )}
 
-                    <form className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input 
-                                id="email"
-                                name="email"
-                                type="email"
-                                placeholder="xyz@email.com"
-                                required
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input 
-                                id="password"
-                                name="password"
-                                type="password"
-                                required
-                            />
-                        </div>
-
-                        <Button formAction={login} type="submit" className="w-full mt-2 cursor-pointer">
-                            Sign In
-                        </Button>
-                    </form>
+                    {/* Using Client Form with Loading State */}
+                    <LoginForm loginAction={login} />
 
                     <div className="mt-4 text-center text-sm text-muted-foreground">
                         Don&apos;t have an account?{' '}
