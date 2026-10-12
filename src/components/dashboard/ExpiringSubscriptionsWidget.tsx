@@ -1,16 +1,17 @@
 'use client'
 
-import Link from 'next/link'
 import Image from 'next/image'
-import { Clock, MessageCircle, RefreshCw } from 'lucide-react'
+import { Clock, MessageCircle } from 'lucide-react'
 import { generateMembershipRenewalReminderLink } from '@/lib/whatsapp'
+import RenewMemberModal from '../RenewMemberModal' 
 
 type ExpiringProps = {
     expiringSoon: any[]
     gymName?: string
+    plans: any[] // 🟢 1. Plans prop yahan accept hoga
 }
 
-export function ExpiringSubscriptionsWidget({ expiringSoon, gymName = 'Test Gym' }: ExpiringProps) {
+export function ExpiringSubscriptionsWidget({ expiringSoon, gymName = 'Test Gym', plans }: ExpiringProps) {
     return (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -30,14 +31,12 @@ export function ExpiringSubscriptionsWidget({ expiringSoon, gymName = 'Test Gym'
             ) : (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
                     {expiringSoon.map((sub: any) => {
-                        // Support both direct mapped objects & nested member objects
                         const fullName = sub.full_name || sub.members?.full_name || 'Member'
                         const phone = sub.phone || sub.members?.phone || ''
                         const photoUrl = sub.members?.photo_url
                         const planName = sub.plan_name || sub.membership_plans?.plan_name || sub.plans?.name || 'Standard Plan'
                         const formattedDate = new Date(sub.end_date).toLocaleDateString('en-IN')
 
-                        // Dynamic wa.me URL
                         const whatsappUrl = generateMembershipRenewalReminderLink({
                             phone: phone,
                             memberName: fullName,
@@ -45,6 +44,12 @@ export function ExpiringSubscriptionsWidget({ expiringSoon, gymName = 'Test Gym'
                             expiryDate: formattedDate,
                             gymName: gymName
                         })
+
+                        const memberObj = sub.members || {
+                            id: sub.member_id || sub.id,
+                            full_name: fullName,
+                            phone: phone
+                        }
 
                         return (
                             <div key={sub.id} className="py-3 flex items-center justify-between gap-3">
@@ -80,7 +85,7 @@ export function ExpiringSubscriptionsWidget({ expiringSoon, gymName = 'Test Gym'
                                     </div>
 
                                     <div className="flex items-center gap-1.5">
-                                        {/* Remind via WhatsApp Button */}
+                                        {/* WhatsApp Button */}
                                         <a 
                                             href={whatsappUrl}
                                             target="_blank"
@@ -89,18 +94,14 @@ export function ExpiringSubscriptionsWidget({ expiringSoon, gymName = 'Test Gym'
                                             title="Send WhatsApp Reminder"
                                         >
                                             Remind <MessageCircle className="w-3.5 h-3.5 fill-emerald-600 dark:fill-emerald-400 text-transparent" />
-
                                         </a>
 
-                                        {/* Renew Subscription Link Button */}
-                                        <Link 
-                                            href={`/dashboard/members?search=${encodeURIComponent(phone || fullName)}`}
-                                            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 dark:text-indigo-400 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 transition"
-                                            title="Renew Member Subscription"
-                                        >
-                                            Renew <RefreshCw className="w-3.5 h-3.5" />
-
-                                        </Link>
+                                        {/* 🟢 2. Purane Link ki jagah direct Modal laga diya */}
+                                        <RenewMemberModal 
+                                            member={memberObj} 
+                                            plans={plans} 
+                                            showText={true}
+                                        />
                                     </div>
                                 </div>
                             </div>

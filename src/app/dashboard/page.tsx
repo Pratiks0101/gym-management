@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Sparkles, UserCheck } from 'lucide-react'
 import { getExpiringSubscriptions, getPendingDues } from '../actions/whatsapp'
 import { getMonthlyRevenueTrend, getWeeklyAttendanceTrend } from '../actions/charts'
+import { getMembershipPlans } from '../actions/plans'
 
 // UI Components & Skeletons
 import { TodayAttendanceWidget } from '@/components/dashboard/TodayAttendaceWidget'
@@ -86,7 +87,10 @@ async function ChartsSection({ gymId }: { gymId: string }) {
 
 async function ExpiringSection({ gymId, gymName }: { gymId: string, gymName: string }) {
     const expiringSoon = await getExpiringSubscriptions(gymId)
-    return <ExpiringSubscriptionsWidget expiringSoon={expiringSoon} gymName={gymName} />
+
+    const plansResult = await getMembershipPlans()
+    const activePlans = (plansResult.data || []).filter((p: any) => p.is_active ?? true)
+    return <ExpiringSubscriptionsWidget expiringSoon={expiringSoon} gymName={gymName} plans={activePlans} />
 }
 
 async function PendingDuesSection({ gymId, gymName }: { gymId: string, gymName: string }) {

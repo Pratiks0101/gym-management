@@ -27,9 +27,10 @@ type RenewMemberModalProps = {
         valid_till?: string
     }
     plans: Plan[]
+    showText?: boolean
 }
 
-export default function RenewMemberModal({member, plans}: RenewMemberModalProps) {
+export default function RenewMemberModal({member, plans, showText = false}: RenewMemberModalProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [selectedPlanId, setSelectedPlanId] = useState<string>(plans[0]?.id || '')
@@ -117,8 +118,12 @@ export default function RenewMemberModal({member, plans}: RenewMemberModalProps)
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger title="Renew Membership" className=" flex gap-2 p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer">
+            <DialogTrigger 
+                title="Renew Membership" 
+                className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 dark:text-indigo-400 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+            >
                     <RefreshCw className="w-4 h-4" />
+                    {showText && <span>Renew</span> }
             </DialogTrigger>
 
             <DialogContent className="sm:max-w-lg p-6 rounded-2xl bg-white shadow-xl">
