@@ -99,16 +99,29 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
     }
 
     const startCamera = async () => {
-        setIsCameraActive(true)
+
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+            alert('Camera App is not supported on this browser.')
+            return
+        }
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } } 
-            })
+
+            const devices = await navigator.mediaDevices.enumerateDevices()
+            const hasCamera = devices.some((device) => device.kind === 'videoinput')
+
+            if(!hasCamera) {
+                alert("No Camera detected on this device. Please use Upload File instead.")
+                return
+            }
+
+            setIsCameraActive(true)
+
+            const stream = await navigator.mediaDevices.getUserMedia({video: true})
             streamRef.current = stream
             if (videoRef.current) {
                 videoRef.current.srcObject = stream
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error(err)
             alert('Camera access denied or not available.')
             setIsCameraActive(false)
