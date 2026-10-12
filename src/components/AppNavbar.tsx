@@ -16,7 +16,9 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { useSidebar } from "@/components/ui/sidebar"
 import Link from "next/link"
+import { LogoutButton } from "./auth/Logout"
 
 type NavbarProps = {
     gymName: string
@@ -24,15 +26,16 @@ type NavbarProps = {
 }
 
 export function AppNavbar({ gymName, ownerEmail }: NavbarProps) {
-    const router = useRouter()
-    const supabase = createClient()
+    // const router = useRouter()
+    // const supabase = createClient()
 
-    const handleSignOut = async () => {
-        await supabase.auth.signOut()
-        router.push('/login')
-        router.refresh()
-    }
+    // const handleSignOut = async () => {
+    //     await supabase.auth.signOut()
+    //     router.push('/login')
+    //     router.refresh()
+    // }
 
+    const {open} = useSidebar()
     const initials = getInitials(gymName)
 
     return (
@@ -40,7 +43,10 @@ export function AppNavbar({ gymName, ownerEmail }: NavbarProps) {
 
             {/* Left Section: Sidebar Toggle Button + Gym Title */}
             <div className="flex items-center gap-2 sm:gap-3">
-                <SidebarTrigger className="text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" />
+                <SidebarTrigger 
+                    title={open ? 'Close Sidebar' : 'Open Sidebar'}
+                    className="text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" 
+                />
                 
                 <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate max-w-50 sm:max-w-xs">
                     {gymName}
@@ -111,12 +117,7 @@ export function AppNavbar({ gymName, ownerEmail }: NavbarProps) {
                         <DropdownMenuSeparator />
 
                         <DropdownMenuGroup>
-                            <DropdownMenuItem 
-                                onClick={handleSignOut}
-                                className="text-red-600 dark:text-red-400 cursor-pointer focus:bg-red-50 dark:focus:bg-red-950"
-                            >
-                                <LogOut className="w-4 h-4 mr-2" /> Sign Out
-                            </DropdownMenuItem>
+                                <LogoutButton isIconOnly={false} />
                         </DropdownMenuGroup>
                     </DropdownMenuContent>
                 </DropdownMenu>

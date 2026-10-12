@@ -117,7 +117,7 @@ export default function RenewMemberModal({member, plans}: RenewMemberModalProps)
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer">
+            <DialogTrigger title="Renew Membership" className=" flex gap-2 p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer">
                     <RefreshCw className="w-4 h-4" />
             </DialogTrigger>
 

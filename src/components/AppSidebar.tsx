@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/client"
 import { getInitials } from "@/lib/utils"
+import { LogoutButton } from "./auth/Logout"
 
 type AppSidebarProps = {
     gymName: string
@@ -41,13 +42,6 @@ export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
         { label: "Plans", href: "/dashboard/plans", icon: CreditCard },
         { label: "Attendance", href: "/dashboard/attendance", icon: QrCode },
     ]
-
-    const handleSignOut = async () => {
-        const supabase = createClient()
-        await supabase.auth.signOut()
-        router.push("/login")
-        router.refresh()
-    }
 
     const initials = getInitials(gymName)
 
@@ -82,7 +76,7 @@ export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
                     {navItems.map((item) => {
                         const Icon = item.icon
                         
-                        // 🟢 Smart Path Matching Fix
+                        // Smart Path Matching Fix
                         const isActive = item.href === "/dashboard" 
                             ? pathname === "/dashboard"
                             : pathname.startsWith(item.href)
@@ -129,14 +123,7 @@ export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
                     </div>
 
                     {/* Signout Button */}
-                    <button
-                        type="button"
-                        onClick={handleSignOut}
-                        title="Sign Out"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors shrink-0 cursor-pointer"
-                    >
-                        <LogOut className="h-4 w-4" />
-                    </button>
+                    <LogoutButton isIconOnly />
                 </div>
             </SidebarFooter>
 

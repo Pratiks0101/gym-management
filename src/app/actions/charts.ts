@@ -67,53 +67,6 @@ export async function getMonthlyRevenueTrend(gymId: string, useDummy = false) {
     })
 }
 
-/**
- * 2. Weekly Footfall Chart Action (Attendance Table)
- */
-// export async function getWeeklyAttendanceTrend(gymId: string, useDummy = false) {
-//     if (useDummy) return DUMMY_WEEKLY_ATTENDANCE_DATA
-
-//     const supabase = await createClient()
-
-//     // Last 7 Days range
-//     const last7Days = Array.from({ length: 7 }).map((_, i) => {
-//         const d = subDays(new Date(), 6 - i)
-//         return {
-//             dateStr: format(d, 'yyyy-MM-dd'),
-//             dayLabel: format(d, 'EEE'),
-//             start: startOfDay(d).toISOString(),
-//             end: endOfDay(d).toISOString()
-//         }
-//     })
-
-//     const startDate = last7Days[0].start
-//     const endDate = last7Days[6].end
-
-//     const { data: attendance, error } = await supabase
-//         .from('attendance')
-//         .select('id, check_in_time')
-//         .eq('gym_id', gymId)
-//         .gte('check_in_time', startDate)
-//         .lte('check_in_time', endDate)
-
-//     if (error || !attendance || attendance.length === 0) {
-//         return DUMMY_WEEKLY_ATTENDANCE_DATA // Fallback to dummy data
-//     }
-
-//     // Real DB Data Map
-//     return last7Days.map((day) => {
-//         const count = attendance.filter((a) => {
-//             const checkInDate = format(new Date(a.check_in_time), 'yyyy-MM-dd')
-//             return checkInDate === day.dateStr
-//         }).length
-
-//         return {
-//             day: day.dayLabel,
-//             count: count
-//         }
-//     })
-// }
-
 export async function getWeeklyAttendanceTrend(gymId: string, useDummy = false) {
     if (useDummy) return DUMMY_WEEKLY_ATTENDANCE_DATA
 

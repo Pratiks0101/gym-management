@@ -30,6 +30,7 @@ export async function signup(formData: FormData) {
     const email = formData.get('email') as string
     const password = formData.get('password') as string
     const gymName = formData.get('gymName') as string
+    const phone = formData.get('phone') as string
 
     // Pass gym name in raw_user_meta_data for the DB Trigger
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -37,7 +38,9 @@ export async function signup(formData: FormData) {
         password,
         options : {
             data: {
-                gym_name: gymName
+                gym_name: gymName,
+                email: email,
+                phone: phone,
             }
         }
     })
@@ -46,19 +49,24 @@ export async function signup(formData: FormData) {
         return redirect(`/signup?error=${encodeURIComponent(authError?.message ||'signup failed')}`)
     }
 
-
-    // Create gym entry for multi-gym owner
-    // const { error: gymError} = await supabase.from('gyms').insert([
-    //     {
-    //         name: gymName,
-    //         owner_id: authData.user.id,
-    //     },
-    // ])
-
-    // if(gymError) {
-    //     return redirect(`/signup?error=${encodeURIComponent(gymError.message)}`)
-    // }
+    if(!authData.session) {
+        return redirect('/signup/verify-notice')
+    }
 
     revalidatePath('/', 'layout')
     redirect('/dashboard')
+}
+
+export async function logout() {
+    const supabase = await createClient()
+
+    const {error} = await supabase.auth.signOut()
+
+    if(error) {
+        console.error('Logout error:', error.message)
+        throw new Error('Failed to logout')
+    }
+
+    revalidatePath('/', 'layout')
+    revalidatePath('/login')
 }

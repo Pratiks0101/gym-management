@@ -82,7 +82,7 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
                     type="text" 
                     id="full_name"
                     name="full_name"
-                    placeholder="Pratik Sharma"
+                    placeholder="Enter Full Name"
                     required
                     className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
                 />
@@ -104,8 +104,8 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
             </div>
 
             {/* Email & Gender */}
-            <div className="grid grid-cols-2 gap-3">
-                <div>
+            <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
                     <label htmlFor="email" className="block text-xs sm:text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
                         Email (Optional)
                     </label>
@@ -113,7 +113,7 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
                         type="email"
                         id="email"
                         name="email"
-                        placeholder="pratik@gmail.com"
+                        placeholder="xyzabc@gmail.com"
                         className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
                     />
                 </div>
@@ -208,7 +208,7 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
                         <div>
                             <label 
                                 htmlFor="amount_paid"
-                                className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1"
+                                className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1 shrink-0"
                             >
                                 Amount Paid (₹) *
                             </label>
@@ -248,13 +248,13 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
                             </select>
                         </div>
 
-                        <div className="flex flex-col justify-end text-right">
-                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                        <div className="flex flex-col justify-end text-right space-y-1">
+                            <div className="text-xs font-black text-slate-800 dark:text-slate-200">
                                 Final Total: <span className="font-bold text-slate-900 dark:text-white">₹{finalTotal}</span>
                             </div>
-                            <div className="text-xs font-bold mt-0.5">
+                            <div className="text-xs font-black text-slate-600 dark:text-slate-300">
                                 Pending Due:{" "}
-                                <span className={calculatedDue > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>
+                                <span className={`font-bold ${calculatedDue > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                                     ₹{calculatedDue}
                                 </span>
                             </div>
@@ -267,7 +267,7 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
             <button 
                 type="submit"
                 disabled={loading}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
             >
                 {loading 
                     ? (

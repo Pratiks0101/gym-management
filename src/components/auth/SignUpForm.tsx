@@ -13,7 +13,7 @@ type SignUpFormProps = {
 export function SignUpForm({ signupAction }: SignUpFormProps) {
     const [isLoading, setIsLoading] = useState(false)
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault()
         setIsLoading(true)
 
@@ -40,6 +40,17 @@ export function SignUpForm({ signupAction }: SignUpFormProps) {
             </div>
 
             <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input 
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="9876543210"
+                    required
+                />
+            </div>
+
+            <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input 
                     id="email"
@@ -56,6 +67,7 @@ export function SignUpForm({ signupAction }: SignUpFormProps) {
                     id="password"
                     name="password"
                     type="password"
+                    minLength={6}
                     required
                 />
             </div>

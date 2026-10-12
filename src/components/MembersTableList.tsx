@@ -2,12 +2,11 @@
 
 import { useState, useMemo } from "react"
 import Image from "next/image"
-import { AlertCircle, Trash2, Search, X } from "lucide-react"
+import { AlertCircle, Search, X } from "lucide-react"
 import { getInitials } from "@/lib/utils"
 import { getMemberStatus } from "@/lib/subscription"
 import RenewMemberModal from "@/components/RenewMemberModal"
 import ClearDueButton from "@/components/ClearDueButton"
-import { deleteMembers } from "@/app/actions/members"
 import { 
     Table,
     TableBody,
@@ -16,6 +15,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import EditMemberModal from "./EditMemberModal"
+import { DeleteMemberButton } from "./DeleteMemberButton"
 
 type MembersTableListProps = {
     initialMembers: any[]
@@ -174,7 +175,7 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
                                                         {getInitials(member.full_name)}
                                                     </div>
                                                 )}
-                                                <span className="truncate max-w-[130px] sm:max-w-none">{member.full_name}</span>
+                                                <span className="truncate max-w-34 sm:max-w-none">{member.full_name}</span>
                                             </div>
                                         </TableCell>
 
@@ -217,15 +218,10 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
                                                 )}
                                                 <RenewMemberModal member={member} plans={activePlans} />
 
-                                                <form action={deleteMembers.bind(null, member.id)}>
-                                                    <button 
-                                                        type="submit"
-                                                        title="Delete Member"
-                                                        className="p-1.5 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-all cursor-pointer"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </form>
+                                                <EditMemberModal member={member} />
+
+                                                <DeleteMemberButton memberId={member.id} memberName={member.full_name} />
+
                                             </div>
                                         </TableCell>
                                     </TableRow>

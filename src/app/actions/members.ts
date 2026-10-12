@@ -465,3 +465,21 @@ export async function clearMemberDue(formData: FormData) {
     revalidatePath('/dashboard/payments')
     return { success: true }
 }
+
+export async function updateMember(memberId: string, formData: FormData) {
+    const supabase = await createClient()
+
+    const fullName = formData.get('full_name') as string
+    const phone = formData.get('phone') as string
+
+    const {error} = await supabase
+        .from('members')
+        .update({full_name: fullName, phone: phone})
+        .eq('id', memberId)
+
+    if(error){
+        throw new Error(error.message)
+    }
+
+    revalidatePath('/dashboard/members')
+}
