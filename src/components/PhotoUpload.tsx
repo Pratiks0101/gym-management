@@ -6,9 +6,10 @@ import Image from "next/image"
 
 type PhotoUploadProps = {
     onImageSelected: (file: File | null) => void
+    disabled?: boolean
 }
 
-export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
+export default function PhotoUpload({ onImageSelected, disabled = false }: PhotoUploadProps) {
     const [preview, setPreview] = useState<string | null>(null)
     const [isCameraActive, setIsCameraActive] = useState(false)
     const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -206,6 +207,7 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
                 <div className="flex flex-wrap gap-2">
                     <button
                         type="button"
+                        disabled={disabled}
                         onClick={() => fileInputRef.current?.click()}
                         className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all cursor-pointer shadow-sm"
                     >
@@ -215,6 +217,7 @@ export default function PhotoUpload({ onImageSelected }: PhotoUploadProps) {
 
                     <button 
                         type="button"
+                        disabled={disabled}
                         onClick={startCamera}
                         className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all cursor-pointer shadow-sm"
                     >

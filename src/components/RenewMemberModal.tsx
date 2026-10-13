@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { renewMemberSubscription } from "@/app/actions/members"
-import { RefreshCw } from "lucide-react"
+import { RefreshCw, Loader2 } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -37,33 +37,46 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
 
     const selectedPlan = plans.find((p) => p.id === selectedPlanId)
 
-    const [discount, setDiscount] = useState<number | ''>(0)
-    const [amountPaid, setAmountPaid] = useState<number | ''>(selectedPlan?.price || 0)
+    const [discount, setDiscount] = useState<number | ''>('')
+    const [amountPaid, setAmountPaid] = useState<number | string>(selectedPlan?.price || 0)
 
     const handlePlanChange = (planId: string) => {
         setSelectedPlanId(planId)
         const p = plans.find((item) => item.id === planId)
         if(p) {
-            const numDiscount = typeof discount === 'number' ? discount : 0
-            setAmountPaid(Math.max(0, p.price - numDiscount))
+            const price = Number(p.price || 0)
+            setAmountPaid(price)
+            setDiscount('')
         }
     }
 
     const planPrice = selectedPlan?.price || 0
-    const numDiscount = typeof discount === 'number' ? discount : 0
-    const numAmountPaid = typeof amountPaid === 'number' ? amountPaid : 0
+    const numDiscount = discount === '' ? 0 : Number(discount)
+    const finalTotal = Math.max(0, planPrice - numDiscount)
+    const numPaid = amountPaid === '' ? 0 : Number(amountPaid)
+    const calculatedDue = Math.max(0, finalTotal - numPaid)
 
-    const finalPrice = Math.max(0, planPrice - numDiscount)
-    const calculatedDue = Math.max(0, finalPrice - numAmountPaid)
+    const handleDiscountChange = (valStr: string) => {
+        if(valStr === '') {
+            setDiscount('')
+            setAmountPaid(planPrice)
+        } else {
+            const valNum = Number(valStr)
+            setDiscount(valNum)
+            const calculatedTotal = Math.max(0, planPrice - valNum)
+            setAmountPaid(calculatedTotal)
+        }
+    }
 
     const getTodayString = () => {
         const today = new Date()
         const yyyy = today.getFullYear()
-        const mm = String(today.getMonth() +1).padStart(2, '0')
+        const mm = String(today.getMonth() + 1).padStart(2, '0')
         const dd = String(today.getDate()).padStart(2, '0')
         return `${yyyy}-${mm}-${dd}`
     }
 
+    // Exact date continuity without +1 day
     const calculateDefaultStartDate = () => {
         const latestSub = member.subscriptions?.[0]
         const rawEndDate = latestSub?.end_date || member.valid_till
@@ -74,12 +87,9 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
             today.setHours(0, 0, 0, 0)
 
             if(currentEndDate >= today) {
-                const nextStartDate = new Date(currentEndDate)
-                nextStartDate.setDate(nextStartDate.getDate() + 1)
-
-                const yyyy = nextStartDate.getFullYear()
-                const mm = String(nextStartDate.getMonth() +1).padStart(2, '0')
-                const dd = String(nextStartDate.getDate()).padStart(2, '0')
+                const yyyy = currentEndDate.getFullYear()
+                const mm = String(currentEndDate.getMonth() + 1).padStart(2, '0')
+                const dd = String(currentEndDate.getDate()).padStart(2, '0')
                 return `${yyyy}-${mm}-${dd}`
             }
         }
@@ -89,7 +99,7 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
     const calculatedStartDate = calculateDefaultStartDate()
     const isAdvanceRenewal = calculatedStartDate !== getTodayString()
 
-    const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         const form = e.currentTarget
         setLoading(true)
@@ -98,7 +108,7 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
         formData.append('member_id', member.id)
         formData.append('total_amount', String(planPrice))
         formData.append('discount', String(numDiscount))
-        formData.append('amount_paid', String(numAmountPaid))
+        formData.append('amount_paid', String(numPaid))
 
         if(selectedPlan) {
             formData.append('duration_months', String(selectedPlan.duration_months))
@@ -122,75 +132,83 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
                 title="Renew Membership" 
                 className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 dark:text-indigo-400 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
             >
-                    <RefreshCw className="w-4 h-4" />
-                    {showText && <span>Renew</span> }
+                <RefreshCw className="w-4 h-4" />
+                {showText && <span>Renew</span> }
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-lg p-6 rounded-2xl bg-white shadow-xl">
-                <DialogHeader className="text-left pr-8 pb-2 border-b">
-                    <DialogTitle className="text-xl font-bold text-gray-900">
+            <DialogContent className="sm:max-w-lg p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
+                <DialogHeader className="text-left pr-8 pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white">
                         Renew Membership
                     </DialogTitle>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Member: <span className="font-semibold text-gray-800">{member.full_name}</span>
-                        </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        Member: <span className="font-semibold text-slate-800 dark:text-slate-200">{member.full_name}</span>
+                    </p>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4 pt-2 text-left">
-                            <div className="space-y-1">
-                                <label 
-                                    htmlFor="plan_id"
-                                    className="block text-sm font-medium text-gray-700">
-                                    Select New Plan *
-                                </label>
-                                <select 
-                                    name="plan_id" 
-                                    id="plan_id"
-                                    value={selectedPlanId}
-                                    onChange={(e) => handlePlanChange(e.target.value)}
-                                    required
-                                    className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-2  focus:ring-black focus:border-black outline-none transition-all cursor-pointer font-medium"
-                                >
-                                    {plans.map((plan) => (
-                                        <option 
-                                            key={plan.id} 
-                                            value={plan.id}
-                                        >
-                                            {plan.plan_name} - ₹{plan.price} ({plan.duration_months} mo)
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                    {/* Select Plan */}
+                    <div className="space-y-1">
+                        <label 
+                            htmlFor="plan_id"
+                            className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Select New Plan *
+                        </label>
+                        <select 
+                            name="plan_id" 
+                            id="plan_id"
+                            value={selectedPlanId}
+                            disabled={loading}
+                            onChange={(e) => handlePlanChange(e.target.value)}
+                            required
+                            className="w-full px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer font-medium disabled:bg-slate-100 dark:disabled:bg-slate-900 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {plans.map((plan) => (
+                                <option key={plan.id} value={plan.id} className="bg-white dark:bg-slate-900">
+                                    {plan.plan_name} - ₹{plan.price} ({plan.duration_months} mo)
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-                            <div className="space-y-1">
-                                <div className="flex justify-between items-center mb-1">
-                                    <label 
-                                        htmlFor="start_date"
-                                        className="block text-sm font-semibold text-gray-700">
-                                        Renewal Start Date *
-                                    </label>
-                                    {isAdvanceRenewal && (
-                                        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                                            Advance Renewal (+1 Day)
-                                        </span>
-                                )}
-                                </div>
-                                    <input 
-                                        type="date" 
-                                        id="start_date"
-                                        name="start_date"
-                                        defaultValue={calculatedStartDate}
-                                        key={calculatedStartDate}
-                                        required
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
-                                    />
-                            </div>
+                    {/* Start Date */}
+                    <div className="space-y-1">
+                        <div className="flex justify-between items-center mb-1">
+                            <label 
+                                htmlFor="start_date"
+                                className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                Renewal Start Date *
+                            </label>
+                            {isAdvanceRenewal && (
+                                <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                                    Advance Renewal (Exact Expiry Date)
+                                </span>
+                            )}
+                        </div>
+                        <input 
+                            type="date" 
+                            id="start_date"
+                            name="start_date"
+                            defaultValue={calculatedStartDate}
+                            key={calculatedStartDate}
+                            disabled={loading}
+                            required
+                            className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 dark:disabled:bg-slate-900 disabled:opacity-60 disabled:cursor-not-allowed"
+                        />
+                    </div>
+
+                    {/* 🟢 Payment Summary Box (Similar to Registration Form) */}
+                    {selectedPlanId && (
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-3">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                Payment Summary
+                            </h3>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
+                                <div>
                                     <label 
-                                        htmlFor="disocunt"
-                                        className="block text-sm font-semibold text-gray-700"
+                                        htmlFor="discount"
+                                        className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1"
                                     >
                                         Discount (₹)
                                     </label>
@@ -198,20 +216,21 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
                                         type="number" 
                                         name="discount"
                                         id="discount"
+                                        min="0"
+                                        disabled={loading}
+                                        placeholder="0"
                                         value={discount}
                                         onChange={(e) => {
-                                            const val = e.target.value
-                                            setDiscount(val === '' ? '' : Number(val))
+                                            handleDiscountChange(e.target.value)
                                         }}
-                                        min="0"
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-black"
+                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition disabled:bg-slate-100 dark:disabled:bg-slate-950 disabled:opacity-60 disabled:cursor-not-allowed"
                                     />
                                 </div>
 
-                                <div className="space-y-1">
+                                <div>
                                     <label 
                                         htmlFor="amount_paid"
-                                        className="block text-sm font-semibold text-gray-700"
+                                        className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1 shrink-0"
                                     >
                                         Amount Paid (₹) *
                                     </label>
@@ -219,61 +238,82 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
                                         type="number" 
                                         name="amount_paid"
                                         id="amount_paid"
+                                        min="0"
+                                        disabled={loading}
+                                        placeholder="0"
                                         value={amountPaid}
                                         onChange={(e) => {
                                             const val = e.target.value
-                                            setAmountPaid(val === '' ? '' : Number(val))
+                                            setAmountPaid(val === "" ? "" : Number(val))
                                         }}
                                         required
-                                        min='0'
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 font-semibold focus:ring-2 focus:ring-black"
+                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition disabled:bg-slate-100 dark:disabled:bg-slate-950 disabled:opacity-60 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             </div>
 
-                            {calculatedDue > 0 && (
-                                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 flex justify-between items-center text-xs font-semibold text-amber-800">
-                                    <span>Pending Due Balance:</span>
-                                    <span className="text-sm font-bold text-amber-900">{calculatedDue}</span>
+                            <div className="grid grid-cols-2 gap-3 pt-1 items-center">
+                                <div>
+                                    <label 
+                                        htmlFor="payment_method"
+                                        className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1"
+                                    >
+                                        Payment Method
+                                    </label>
+                                    <select 
+                                        name="payment_method" 
+                                        id="payment_method"
+                                        disabled={loading}
+                                        defaultValue="upi"
+                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition disabled:bg-slate-100 dark:disabled:bg-slate-950 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    >
+                                        <option value="upi">UPI</option>
+                                        <option value="cash">Cash</option>
+                                        <option value="card">Card</option>
+                                    </select>
                                 </div>
-                            )}
 
-                            <div className="space-y-1">
-                                <label 
-                                    htmlFor="payment_method" 
-                                    className="block text-sm font-semibold text-gray-700"
-                                >
-                                    Payment Method
-                                </label>
-                                <select 
-                                    name="payment_method" 
-                                    id="payment_method"
-                                    defaultValue="upi"
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
-                                >
-                                    <option value="upi">UPI</option>
-                                    <option value="cash">Cash</option>
-                                    <option value="card">Card</option>
-                                </select>
+                                <div className="flex flex-col justify-end text-right space-y-1">
+                                    <div className="text-xs font-black text-slate-800 dark:text-slate-200">
+                                        Final Total: <span className="font-bold text-slate-900 dark:text-white">₹{finalTotal}</span>
+                                    </div>
+                                    <div className="text-xs font-black text-slate-600 dark:text-slate-300">
+                                        Pending Due:{" "}
+                                        <span className={`font-bold ${calculatedDue > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                                            ₹{calculatedDue}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+                    )}
 
-                            <DialogFooter className="pt-4 flex gap-3 border-t">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsOpen(false)}
-                                    className="w-1/2 py-2.5 text-sm font-medium border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-1/2 bg-black text-white py-2.5 text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 cursor-pointer"
-                                >
-                                    {loading ? 'Renewing...' : "Confirm Renewal"}
-                                </button>
-                            </DialogFooter>
-                        </form>
+                    {/* Footer Actions */}
+                    <DialogFooter className="pt-4 flex gap-3 border-t border-slate-100 dark:border-slate-800">
+                        <button
+                            type="button"
+                            onClick={() => setIsOpen(false)}
+                            disabled={loading}
+                            className="w-1/2 py-2.5 text-sm font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-1/2 bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>Renewing...</span>
+                                </>
+                            ) : (
+                                "Confirm Renewal"
+                            )}
+                        </button>
+                    </DialogFooter>
+                </form>
             </DialogContent>
         </Dialog>
     )
