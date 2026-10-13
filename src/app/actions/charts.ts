@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { subMonths, subDays, format, startOfMonth, endOfMonth, startOfDay, endOfDay, getHours } from 'date-fns'
+import { subMonths, subDays, format, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns'
 
 // DUMMY DATA FALLBACKS
 const DUMMY_REVENUE_DATA = [
@@ -22,26 +22,24 @@ const DUMMY_WEEKLY_ATTENDANCE_DATA = [
 ]
 
 /**
- * 1. Revenue Chart Action (Payments Table)
+ * Revenue Chart Action (Payments Table) - Optimized with O(1) Lookup Map
  */
 export async function getMonthlyRevenueTrend(gymId: string, useDummy = false) {
     if (useDummy) return DUMMY_REVENUE_DATA
 
     const supabase = await createClient()
 
-    // Last 6 Months range
+    // Last 6 Months range definition
     const last6Months = Array.from({ length: 6 }).map((_, i) => {
         const d = subMonths(new Date(), 5 - i)
         return {
             monthLabel: format(d, 'MMM'),
             monthYearKey: format(d, 'yyyy-MM'),
-            start: startOfMonth(d).toISOString(),
-            end: endOfMonth(d).toISOString()
         }
     })
 
-    const startDate = last6Months[0].start
-    const endDate = last6Months[5].end
+    const startDate = startOfMonth(subMonths(new Date(), 5)).toISOString()
+    const endDate = endOfMonth(new Date()).toISOString()
 
     const { data: payments, error } = await supabase
         .from('payments')
@@ -52,36 +50,40 @@ export async function getMonthlyRevenueTrend(gymId: string, useDummy = false) {
 
     const validPayments = (!error && payments) ? payments : []
 
-    return last6Months.map(m => {
-        const revenue = validPayments
-        .filter((p) => format(new Date(p.created_at), 'yyyy-MM') === m.monthYearKey)
-        .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0)
+    // Group payments by 'yyyy-MM' into a fast lookup map
+    const revenueMap: Record<string, number> = {}
+    for (const p of validPayments) {
+        if (!p.created_at) continue
+        const key = p.created_at.slice(0, 7) // Fast ISO substring 'yyyy-MM'
+        revenueMap[key] = (revenueMap[key] || 0) + Number(p.amount_paid || 0)
+    }
 
-        return {
-            month: m.monthLabel,
-            revenue: revenue
-        }
-    })
+    // Map through months in O(1) time
+    return last6Months.map(m => ({
+        month: m.monthLabel,
+        revenue: revenueMap[m.monthYearKey] || 0
+    }))
 }
 
+/**
+ * Weekly Attendance Trend - Optimized with Pre-aggregated Dictionary Map
+ */
 export async function getWeeklyAttendanceTrend(gymId: string, useDummy = false) {
     if (useDummy) return DUMMY_WEEKLY_ATTENDANCE_DATA
 
     const supabase = await createClient()
 
-    // 🟢 Rolling 7 Days (Today + Past 6 Days)
+    // Rolling 7 Days (Today + Past 6 Days)
     const last7Days = Array.from({ length: 7 }).map((_, i) => {
         const d = subDays(new Date(), 6 - i)
         return {
             dateStr: format(d, 'yyyy-MM-dd'),
             dayLabel: format(d, 'EEE'), // E.g., 'Mon', 'Sun'
-            start: startOfDay(d).toISOString(),
-            end: endOfDay(d).toISOString()
         }
     })
 
-    const startDate = last7Days[0].start
-    const endDate = last7Days[6].end
+    const startDate = startOfDay(subDays(new Date(), 6)).toISOString()
+    const endDate = endOfDay(new Date()).toISOString()
 
     // Single lightweight query for past 7 days
     const { data: attendance, error } = await supabase
@@ -91,32 +93,35 @@ export async function getWeeklyAttendanceTrend(gymId: string, useDummy = false) 
         .gte('check_in_time', startDate)
         .lte('check_in_time', endDate)
 
-        const validAttendance = (!error && attendance) ? attendance : []
+    const validAttendance = (!error && attendance) ? attendance : []
 
-    // 🟢 Map each day with Morning (before 12 PM) and Evening (after 12 PM) split
+    // Group attendance by date string with pre-calculated morning/evening counts
+    const attendanceMap: Record<string, { morning: number; evening: number }> = {}
+
+    for (const record of validAttendance) {
+        if (!record.check_in_time) continue
+        const dateKey = record.check_in_time.slice(0, 10) // Fast ISO substring 'yyyy-MM-dd'
+
+        if (!attendanceMap[dateKey]) {
+            attendanceMap[dateKey] = { morning: 0, evening: 0 }
+        }
+
+        const hour = new Date(record.check_in_time).getHours()
+        if (hour < 12) {
+            attendanceMap[dateKey].morning++
+        } else {
+            attendanceMap[dateKey].evening++
+        }
+    }
+
+    // Map through the 7 days efficiently
     return last7Days.map((day) => {
-        const dayCheckIns = validAttendance.filter((a) => {
-            const checkInDate = format(new Date(a.check_in_time), 'yyyy-MM-dd')
-            return checkInDate === day.dateStr
-        })
-
-        let morningCount = 0
-        let eveningCount = 0
-
-        dayCheckIns.forEach((record) => {
-            const hour = getHours(new Date(record.check_in_time))
-            if (hour < 12) {
-                morningCount++
-            } else {
-                eveningCount++
-            }
-        })
-
+        const counts = attendanceMap[day.dateStr] || { morning: 0, evening: 0 }
         return {
             day: day.dayLabel,
-            morning: morningCount,
-            evening: eveningCount,
-            total: morningCount + eveningCount
+            morning: counts.morning,
+            evening: counts.evening,
+            total: counts.morning + counts.evening
         }
     })
 }

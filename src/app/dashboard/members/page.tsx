@@ -4,9 +4,14 @@ import RegisterMemberForm from "@/components/RegisterMemberForm";
 import MembersTableList from "@/components/MembersTableList";
 
 export default async function MembersPage() {
-    const { data: members = [] } = await getMembers()
-    const { data: plans = [] } = await getMembershipPlans()
+    // 🟢 Fetch members and membership plans in parallel for lightning-fast loading
+    const [membersRes, plansRes] = await Promise.all([
+        getMembers(),
+        getMembershipPlans()
+    ])
 
+    const members = membersRes.data || []
+    const plans = plansRes.data || []
     const activePlans = plans.filter((p: any) => p.is_active !== false)
 
     return (

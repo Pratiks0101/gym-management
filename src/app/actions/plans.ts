@@ -3,22 +3,20 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
-
 export async function getMembershipPlans() {
     const supabase = await createClient()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if(!user) return { success: false, error: "Unauthorized" }
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { success: false, data: [], error: "Unauthorized" }
 
-// Get gym_id of the owner
-
+    // Get gym_id of the owner
     const { data: gym, error: gymError } = await supabase
         .from('gyms')
         .select('id')
         .eq('owner_id', user.id)
         .single()
 
-    if (gymError || !gym) return { success: false, error: "Gym not found"}
+    if (gymError || !gym) return { success: false, data: [], error: "Gym not found" }
 
     const { data: plans, error } = await supabase
         .from('membership_plans')
@@ -26,19 +24,20 @@ export async function getMembershipPlans() {
         .eq('gym_id', gym.id)
         .order('created_at', { ascending: false })
 
-    if (error) return { success: false, error: error.message }
+    if (error) {
+        console.error('[Fetch Plans Error]:', error)
+        return { success: false, data: [], error: error.message }
+    }
 
-    return { success: true, data: plans }
+    return { success: true, data: plans || [], error: null }
 }
 
 // Create new membership plan
-
-export async function createMembershipPlan(formData:FormData) {
+export async function createMembershipPlan(formData: FormData) {
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
-
-    if(!user) return { success: false, error: "Unauthorized" }
+    if (!user) return { success: false, error: "Unauthorized" }
 
     const { data: gym } = await supabase
         .from('gyms')
@@ -46,39 +45,33 @@ export async function createMembershipPlan(formData:FormData) {
         .eq('owner_id', user.id)
         .single()
 
-
-
-    if (!gym) {
-
-        return {success: false, error: "Gym not found"}
-    }
+    if (!gym) return { success: false, error: "Gym not found" }
 
     const plan_name = formData.get('name') as string
     const price = Number(formData.get('price'))
     const duration_months = Number(formData.get('duration_months'))
 
-    if (!plan_name || !price || !duration_months) {
-        return { success: false,  error: "Please fill all required fields"}
+    if (!plan_name || isNaN(price) || isNaN(duration_months)) {
+        return { success: false, error: "Please fill all required fields correctly" }
     }
 
     const { error } = await supabase
         .from('membership_plans')
-        .insert([
-            {
-                gym_id: gym.id,
-                plan_name,
-                price,
-                duration_months,
-                is_active: true
-            }
-        ])
-        if(error) {
-            console.error("Create Plan Eror:", error.message)
-            return 
-        }
-        // .select()
+        .insert({
+            gym_id: gym.id,
+            plan_name,
+            price,
+            duration_months,
+            is_active: true
+        })
+
+    if (error) {
+        console.error("Create Plan Error:", error.message)
+        return { success: false, error: error.message }
+    }
 
     revalidatePath('/dashboard/plans')
+    return { success: true }
 }
 
 export async function updateMembershipPlan(formData: FormData) {
@@ -89,7 +82,9 @@ export async function updateMembershipPlan(formData: FormData) {
     const price = Number(formData.get('price'))
     const duration_months = Number(formData.get('duration_months'))
 
-    if(!planId || !plan_name || !price || !duration_months) return
+    if (!planId || !plan_name || isNaN(price) || isNaN(duration_months)) {
+        return { success: false, error: "Invalid parameters" }
+    }
 
     const { error } = await supabase
         .from('membership_plans')
@@ -102,10 +97,11 @@ export async function updateMembershipPlan(formData: FormData) {
 
     if (error) {
         console.error("Update Plan Error:", error.message)
-        return
+        return { success: false, error: error.message }
     }
 
     revalidatePath('/dashboard/plans')
+    return { success: true }
 }
 
 export async function togglePlanStatus(planId: string, currentStatus: boolean) {
@@ -113,15 +109,16 @@ export async function togglePlanStatus(planId: string, currentStatus: boolean) {
 
     const { error } = await supabase
         .from('membership_plans')
-        .update({ is_active: !currentStatus})
+        .update({ is_active: !currentStatus })
         .eq('id', planId)
 
     if (error) {
         console.error("Toggle Status Error:", error.message)
-        return
+        return { success: false, error: error.message }
     }
 
     revalidatePath('/dashboard/plans')
+    return { success: true }
 }
 
 export async function deleteMembershipPlan(planId: string) {
@@ -132,13 +129,12 @@ export async function deleteMembershipPlan(planId: string) {
         .select('id', { count: 'exact', head: true })
         .eq('plan_id', planId)
 
-    if(countError) {
+    if (countError) {
         console.error("Member Check Error:", countError.message)
     }
 
     if (count && count > 0) {
-        console.warn("Cannot delete plan: Members are actively using this plan. Please mark it as inactice instead.")
-        return
+        return { success: false, error: "Cannot delete plan: Members are actively using this plan. Please mark it as inactive instead." }
     }
 
     const { error } = await supabase
@@ -146,10 +142,11 @@ export async function deleteMembershipPlan(planId: string) {
         .delete()
         .eq('id', planId)
 
-    if(error) {
+    if (error) {
         console.error("Delete Plan Error:", error.message)
-        return
+        return { success: false, error: error.message }
     }
 
     revalidatePath('/dashboard/plans')
+    return { success: true }
 }

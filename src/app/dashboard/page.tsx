@@ -52,23 +52,21 @@ async function KpiSection({ gymId }: { gymId: string }) {
     )
 }
 
-// 🟢 Charts Async Section
+// 🟢 Charts Async Section (Optimized Parallel Fetch)
 async function ChartsSection({ gymId }: { gymId: string }) {
     const USE_DUMMY_DATA = false 
-
     const supabase = await createClient()
 
-    const [revenueData, weeklyAttendanceData, activeMemvbersRes] = await Promise.all([
+    const [revenueData, weeklyAttendanceData, activeMembersRes] = await Promise.all([
         getMonthlyRevenueTrend(gymId, USE_DUMMY_DATA),
         getWeeklyAttendanceTrend(gymId, USE_DUMMY_DATA),
-        supabase.from('members').select('*', {count: 'exact', head: true}).eq('gym_id', gymId)
+        supabase.from('members').select('*', { count: 'exact', head: true }).eq('gym_id', gymId)
     ])
 
-    const activeMembersCount = activeMemvbersRes.count || 0
+    const activeMembersCount = activeMembersRes.count || 0
     const lastDayItem = weeklyAttendanceData[weeklyAttendanceData.length - 1] as any
     const todayCount = lastDayItem?.total ?? lastDayItem?.count ?? 0
-
-    const dynamicExpectedCount = activeMembersCount && activeMembersCount > 0 ? activeMembersCount : 10
+    const dynamicExpectedCount = activeMembersCount > 0 ? activeMembersCount : 10
 
     return (
         <div className="space-y-8">
@@ -86,17 +84,24 @@ async function ChartsSection({ gymId }: { gymId: string }) {
     )
 }
 
+// 🟢 Expiring Section (Optimized with Promise.all)
 async function ExpiringSection({ gymId, gymName }: { gymId: string, gymName: string }) {
-    const expiringSoon = await getExpiringSubscriptions(gymId)
+    const [expiringSoon, plansResult] = await Promise.all([
+        getExpiringSubscriptions(gymId),
+        getMembershipPlans()
+    ])
 
-    const plansResult = await getMembershipPlans()
     const activePlans = (plansResult.data || []).filter((p: any) => p.is_active ?? true)
     return <ExpiringSubscriptionsWidget expiringSoon={expiringSoon} gymName={gymName} plans={activePlans} />
 }
 
+// 🟢 Expired Section (Optimized with Promise.all)
 async function ExpiredSection({ gymId, gymName }: { gymId: string, gymName: string }) {
-    const expiredMembers = await getExpiredSubscriptions(gymId)
-    const plansResult = await getMembershipPlans()
+    const [expiredMembers, plansResult] = await Promise.all([
+        getExpiredSubscriptions(gymId),
+        getMembershipPlans()
+    ])
+
     const activePlans = (plansResult.data || []).filter((p: any) => p.is_active ?? true)
     return <ExpiredMembersWidget expiredMembers={expiredMembers} gymName={gymName} plans={activePlans} />
 }

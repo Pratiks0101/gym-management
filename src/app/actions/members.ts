@@ -7,38 +7,43 @@ export async function addMember(formData: FormData) {
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
-
     if(!user) throw new Error("Unauthorized")
 
-    const { data : gym } = await supabase
-        .from('gyms')
-        .select('id')
-        .eq('owner_id', user.id)
-        .single()
+    // 🟢 1. Parallel fetch: Gym profile & Plan data fetch simultaneously
+    const plan_id = formData.get('plan_id') as string
+    if (!plan_id) throw new Error("Required fields missing")
+
+    const [gymRes, planRes] = await Promise.all([
+        supabase.from('gyms').select('id').eq('owner_id', user.id).single(),
+        supabase.from('membership_plans').select('*').eq('id', plan_id).single()
+    ])
+
+    const gym = gymRes.data
+    const plan = planRes.data
 
     if(!gym) throw new Error("Gym profile not found")
+    if(!plan) throw new Error("Plan not found")
 
     const full_name = formData.get('full_name') as string
     const phone = formData.get('phone') as string
     const email = formData.get('email') as string || null
     const gender = formData.get('gender') as string
-    const plan_id = formData.get('plan_id') as string
     const start_date_str = formData.get('start_date') as string
     const avatarFile = formData.get('avatar_file') as File | null
     const discount = Number(formData.get('discount') || 0)
     const amountPaid = Number(formData.get('amount_paid') || 0)
     const paymentMethod = (formData.get('payment_method') as string) || 'cash'
 
-    if (!full_name || !phone || !plan_id) {
+    if (!full_name || !phone) {
         throw new Error("Required fields missing")
     }
 
     let photo_url: string | null = null
 
+    // 🟢 2. Avatar Upload (Agar file hai toh upload karo)
     if(avatarFile && avatarFile.size > 0 && avatarFile.name !== 'undefined') {
         const fileExt = avatarFile.name.split('.').pop() || 'jpg'
         const fileName = `${gym.id}/${Date.now()}.${fileExt}`
-
         const arrayBuffer = await avatarFile.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
@@ -58,20 +63,10 @@ export async function addMember(formData: FormData) {
                 .getPublicUrl(uploadData.path)
 
             photo_url = publicUrlData.publicUrl
-        } else {
-            console.error('Storage Upload Error:', uploadError)
         }
     }
 
-    const { data: plan } = await supabase
-        .from('membership_plans')
-        .select('*')
-        .eq('id', plan_id)
-        .single()
-
-    if(!plan) throw new Error("Plan not found")
-
-    const planPrice = Number(plan.price|| 0)
+    const planPrice = Number(plan.price || 0)
     const finalTotal = Math.max(0, planPrice - discount)
     const dueAmount = Math.max(0, finalTotal - amountPaid)
 
@@ -86,6 +81,7 @@ export async function addMember(formData: FormData) {
     const endDate = new Date(startDate)
     endDate.setMonth(endDate.getMonth() + plan.duration_months)
 
+    // Insert Member
     const { data: member, error: memberError } = await supabase
         .from('members')
         .insert({
@@ -105,7 +101,8 @@ export async function addMember(formData: FormData) {
         throw new Error("Failed to create member")
     }
 
-    const {data: subscription, error: subError} = await supabase
+    // Insert Subscription
+    const { data: subscription, error: subError } = await supabase
         .from('subscriptions')
         .insert({
             gym_id: gym.id,
@@ -115,8 +112,8 @@ export async function addMember(formData: FormData) {
             end_date: endDate.toISOString().split('T')[0],
             total_amount: finalTotal,
             amount_paid: amountPaid,
-            discount:discount,
-            due_amount:dueAmount,
+            discount: discount,
+            due_amount: dueAmount,
             payment_status: paymentStatus,
             payment_method: paymentMethod,
             status: 'active'
@@ -125,12 +122,13 @@ export async function addMember(formData: FormData) {
         .single()
 
     if (subError) {
-        console.error("Error creating subscriptionL", subError)
+        console.error("Error creating subscription:", subError)
         throw new Error("Failed to create subscription")
     }
 
+    // Insert Payment Log if paid > 0
     if(amountPaid > 0) {
-        const {error: paymentError} = await supabase
+        const { error: paymentError } = await supabase
             .from('payments')
             .insert({
                 gym_id: gym.id,
@@ -143,14 +141,13 @@ export async function addMember(formData: FormData) {
         
         if(paymentError) {
             console.error("Payment Log Error:", paymentError)
-            throw new Error("Failed to log payment")
         }
     }
 
     revalidatePath('/dashboard/members')
     revalidatePath('/dashboard/payments')
+    revalidatePath('/dashboard')
 }
-
 
 export async function getMembers() {
     const supabase = await createClient()
@@ -191,19 +188,13 @@ export async function getMembers() {
         .order('created_at', { ascending: false })
 
     if(error) {
-        console.error("Error Fetching members:", error)
         return { data: [], error: error.message}
     }
 
     const sortedMembers = (members || []).map((member: any) => {
         const subscriptions = member.subscriptions ? [...member.subscriptions] : []
-
         subscriptions.sort((a: any, b: any) => new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime())
-
-        return {
-            ...member,
-            subscriptions
-        }
+        return { ...member, subscriptions }
     })
 
     return { data: sortedMembers, error: null }
@@ -211,72 +202,54 @@ export async function getMembers() {
 
 export async function deleteMembers(memberId: string) {
     const supabase = await createClient()
-
     const { data: { user } } = await supabase.auth.getUser()
-
     if(!user) throw new Error("Unauthorized")
 
-    const { data: member} = await supabase
+    // Fetch photo url
+    const { data: member } = await supabase
         .from('members')
         .select('photo_url')
         .eq('id', memberId)
         .single()
 
+    // Delete Photo and Subscriptions in Parallel for Speed
+    const deletePromises = []
+
     if(member?.photo_url) {
         const urlParts = member.photo_url.split('/member-photos/')
         if(urlParts.length > 1) {
-            const filePath = urlParts[1]
-
-            const { error: storageError } = await supabase
-                .storage
-                .from('member-photos')
-                .remove([filePath])
-
-            if(storageError) {
-                console.error("Error deleting member photo from storage:", storageError.message)
-            }
+            deletePromises.push(supabase.storage.from('member-photos').remove([urlParts[1]]))
         }
     }
 
-    const { error: subError } = await supabase
-        .from('subscriptions')
-        .delete()
-        .eq('member_id', memberId)
+    deletePromises.push(supabase.from('subscriptions').delete().eq('member_id', memberId))
 
-    if(subError) {
-        console.error("Error deleting subscriptions:", subError)
-        throw new Error("Failed to delete member subscriptions")
-    }
+    await Promise.all(deletePromises)
 
+    // Finally delete member
     const { error: memberError } = await supabase
         .from('members')
         .delete()
         .eq('id', memberId)
 
-    if(memberError) {
-            console.error("Error deleting member:", memberError)
-            throw new Error("Failed to delete member")
-    }
+    if(memberError) throw new Error("Failed to delete member")
 
     revalidatePath('/dashboard/members')
+    revalidatePath('/dashboard')
 }
 
 export async function renewMemberSubscription(formData: FormData) {
     const supabase = await createClient()
-
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error("Unauthorized")
 
-    const { data: gym, error: gymError } = await supabase
+    const { data: gym } = await supabase
         .from('gyms')
         .select('id')
         .eq('owner_id', user.id)
         .single()
 
-    if(gymError || !gym?.id) {
-        console.error("Gym profile not found for user:", gymError)
-        throw new Error("Gym account not found. Cannot Proceed.")
-    }
+    if(!gym?.id) throw new Error("Gym account not found.")
 
     const memberId = formData.get('member_id') as string
     const planId = formData.get('plan_id') as string
@@ -320,8 +293,8 @@ export async function renewMemberSubscription(formData: FormData) {
     const yyyy = effectiveStartDate.getFullYear()
     const mm = String(effectiveStartDate.getMonth() + 1).padStart(2, '0')
     const dd = String(effectiveStartDate.getDate()).padStart(2, '0')
-
     const start = `${yyyy}-${mm}-${dd}`
+
     const endDateObj = new Date(effectiveStartDate)
     endDateObj.setMonth(endDateObj.getMonth() + durationMonths)
     const endYyyy = endDateObj.getFullYear()
@@ -329,16 +302,13 @@ export async function renewMemberSubscription(formData: FormData) {
     const endDd = String(endDateObj.getDate()).padStart(2, '0')
     const endDate = `${endYyyy}-${endMm}-${endDd}`
 
-    const { error: updateOldSubError } = await supabase
+    // Expire old active sub and insert new sub
+    await supabase
         .from('subscriptions')
         .update({status: 'expired'})
         .eq('member_id', memberId)
         .eq('gym_id', gym.id)
         .eq('status', 'active')
-
-    if(updateOldSubError) {
-        console.error("Error updating previous subscription status:", updateOldSubError)
-    }
 
     const {data: subscription, error: subError } = await supabase
         .from('subscriptions')
@@ -359,13 +329,10 @@ export async function renewMemberSubscription(formData: FormData) {
         .select()
         .single()
 
-    if (subError) {
-        console.error("Error creating subscription:", subError)
-        throw new Error("Failed to renew subscription")
-    }
+    if (subError) throw new Error("Failed to renew subscription")
 
     if(amountPaid > 0) {
-        const {error: paymentError} = await supabase
+        await supabase
             .from('payments')
             .insert({
                 gym_id: gym.id,
@@ -375,11 +342,6 @@ export async function renewMemberSubscription(formData: FormData) {
                 payment_type: 'renewal',
                 payment_method: paymentMethod
             })
-
-        if(paymentError){
-            console.error("Renewal payment log Error:", paymentError)
-            throw new Error("Renewal Payment log failed.")
-        }
     }
 
     revalidatePath('/dashboard')
@@ -390,16 +352,10 @@ export async function renewMemberSubscription(formData: FormData) {
 
 export async function clearMemberDue(formData: FormData) {
     const supabase = await createClient()
-
     const {data: {user}} = await supabase.auth.getUser()
     if(!user) throw new Error("Unauthorized")
 
-    const {data: gym} = await supabase
-        .from('gyms')
-        .select('id')
-        .eq('owner_id', user.id)
-        .single()
-
+    const {data: gym} = await supabase.from('gyms').select('id').eq('owner_id', user.id).single()
     if(!gym) throw new Error("Gym not found")
 
     const subscriptionId = formData.get('subscription_id') as string
@@ -407,16 +363,7 @@ export async function clearMemberDue(formData: FormData) {
     const amountPaying = Number(formData.get('amount_paid') || 0)
     const paymentMethod = ((formData.get('payment_method') as string) || 'upi').toLowerCase()
 
-    if(!subscriptionId || !memberId) {
-        throw new Error("Missing required parameters for clearing due")
-    }
-
-    const {data: sub} = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('id', subscriptionId)
-        .single()
-
+    const {data: sub} = await supabase.from('subscriptions').select('*').eq('id', subscriptionId).single()
     if(!sub) throw new Error("Subscription not found")
 
     const currentDue = Number(sub.due_amount || 0)
@@ -427,7 +374,7 @@ export async function clearMemberDue(formData: FormData) {
     const newPaid = currentPaid + payAmount
     const newPaymentStatus = newDue === 0 ? 'paid' : 'partial'
 
-    const { error: subUpdateError } = await supabase
+    await supabase
         .from('subscriptions')
         .update({
             due_amount: newDue,
@@ -437,13 +384,8 @@ export async function clearMemberDue(formData: FormData) {
         })
         .eq('id', subscriptionId)
 
-    if (subUpdateError) {
-        console.error("Error clearing due:", subUpdateError)
-        throw new Error("Failed to clear due amount")
-    }
-
     if(payAmount > 0) {
-        const {error: paymentError} = await supabase
+        await supabase
             .from('payments')
             .insert({
                 gym_id: gym.id,
@@ -453,11 +395,6 @@ export async function clearMemberDue(formData: FormData) {
                 payment_type: 'due_clear',
                 payment_method: paymentMethod
             })
-        
-            if(paymentError) {
-                console.error("Due clear payment log error:", paymentError)
-                throw new Error("Failed to log due clear payment.")
-            }
     }
 
     revalidatePath('/dashboard')
@@ -468,7 +405,6 @@ export async function clearMemberDue(formData: FormData) {
 
 export async function updateMember(memberId: string, formData: FormData) {
     const supabase = await createClient()
-
     const fullName = formData.get('full_name') as string
     const phone = formData.get('phone') as string
 
@@ -477,9 +413,7 @@ export async function updateMember(memberId: string, formData: FormData) {
         .update({full_name: fullName, phone: phone})
         .eq('id', memberId)
 
-    if(error){
-        throw new Error(error.message)
-    }
+    if(error) throw new Error(error.message)
 
     revalidatePath('/dashboard/members')
 }

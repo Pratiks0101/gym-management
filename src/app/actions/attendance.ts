@@ -15,24 +15,20 @@ export async function generateDeskToken(gymId: string) {
     // Token Validity: 5 Minutes Buffer
     const expiresAt = new Date(timestamp + 5 * 60 * 1000).toISOString()
 
-    // Expired QR session cleanup
-    await supabase
-        .from('qr_sessions')
-        .delete()
-        .lt('expires_at', new Date().toISOString())
-
-    const { error } = await supabase
-        .from('qr_sessions')
-        .insert({
-            gym_id: gymId,
-            token: token,
-            expires_at: expiresAt,
-        })
-
-    if (error) {
-        console.error('[QR Generation Error]:', error)
-        return { success: false, token: null }
-    }
+    // 🟢 Parallel cleanup and insert for lightning fast QR generation
+    await Promise.all([
+        supabase
+            .from('qr_sessions')
+            .delete()
+            .lt('expires_at', new Date().toISOString()),
+        supabase
+            .from('qr_sessions')
+            .insert({
+                gym_id: gymId,
+                token: token,
+                expires_at: expiresAt,
+            })
+    ])
 
     return { success: true, token }
 }
@@ -45,7 +41,6 @@ export async function processMemberCheckIn({ gymId, phone, token }: {
 }) {
     const supabase = createAdminClient()
 
-    // Input Sanitization
     const sanitizedPhone = phone ? phone.trim().replace(/\s+/g, '') : ''
 
     if (!sanitizedPhone || sanitizedPhone.length < 10) {
@@ -56,13 +51,24 @@ export async function processMemberCheckIn({ gymId, phone, token }: {
         return { success: false, message: 'Invalid request parameters.' }
     }
 
-    // A. QR Session Token Verification
-    const { data: qrSession, error: qrErr } = await supabase
-        .from('qr_sessions')
-        .select('id, expires_at')
-        .eq('token', token)
-        .eq('gym_id', gymId)
-        .maybeSingle()
+    // 🟢 1. Parallel verification: Verify QR Session and Fetch Member simultaneously
+    const [qrRes, memberRes] = await Promise.all([
+        supabase
+            .from('qr_sessions')
+            .select('id, expires_at')
+            .eq('token', token)
+            .eq('gym_id', gymId)
+            .maybeSingle(),
+        supabase
+            .from('members')
+            .select('id, full_name, status, phone, gym_id')
+            .eq('gym_id', gymId)
+            .eq('phone', sanitizedPhone)
+            .maybeSingle()
+    ])
+
+    const qrSession = qrRes.data
+    const qrErr = qrRes.error
 
     if (qrErr || !qrSession) {
         return { success: false, message: 'Invalid or expired QR code! Please rescan live QR.' }
@@ -72,46 +78,40 @@ export async function processMemberCheckIn({ gymId, phone, token }: {
         return { success: false, message: 'QR Code expired! Please scan fresh QR code.' }
     }
 
-    console.log(`[CheckIn Search] Searching for GymID: "${gymId}" and Phone: "${sanitizedPhone}"`)
-
-    const { data: member, error: memberErr } = await supabase
-        .from('members')
-        .select('id, full_name, status, phone, gym_id')
-        .eq('gym_id', gymId)
-        .eq('phone', sanitizedPhone)
-        .maybeSingle()
-
-    if (memberErr) {
-        console.error('[CheckIn Member Query Error]:', memberErr)
-    }
-
+    const member = memberRes.data
     if (!member) {
-        // Backup Check: Sirf Phone number se search karke dekhte hain DB me kya value hai
-        const { data: phoneCheck } = await supabase
-            .from('members')
-            .select('id, gym_id, phone, full_name')
-            .ilike('phone', `%${sanitizedPhone.slice(-10)}%`)
-        
-        console.log(`[CheckIn Fallback Debug] DB records matching last 10 digits:`, phoneCheck)
-
         return { success: false, message: 'No registered member found with this phone number.' }
     }
 
-    // C. Active/Advance Subscription Validity Check via `subscriptions` table
-    const { data: latestSub, error: subErr } = await supabase
-        .from('subscriptions')
-        .select('end_date, status')
-        .eq('gym_id', gymId)
-        .eq('member_id', member.id)
-        .order('end_date', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+    // 🟢 2. Parallel check: Fetch Subscription and Check Today's Attendance simultaneously
+    const startOfDay = new Date()
+    startOfDay.setHours(0, 0, 0, 0)
+
+    const [subRes, attendanceRes] = await Promise.all([
+        supabase
+            .from('subscriptions')
+            .select('end_date, status')
+            .eq('gym_id', gymId)
+            .eq('member_id', member.id)
+            .order('end_date', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        supabase
+            .from('attendance')
+            .select('id')
+            .eq('gym_id', gymId)
+            .eq('member_id', member.id)
+            .gte('check_in_time', startOfDay.toISOString())
+            .maybeSingle()
+    ])
+
+    const latestSub = subRes.data
+    const subErr = subRes.error
 
     if (subErr || !latestSub) {
         return { success: false, message: 'No active subscription plan found.' }
     }
 
-    // Safe Date String Comparison (YYYY-MM-DD)
     const todayStr = new Date().toISOString().split('T')[0]
     const expiryStr = new Date(latestSub.end_date).toISOString().split('T')[0]
 
@@ -119,19 +119,7 @@ export async function processMemberCheckIn({ gymId, phone, token }: {
         return { success: false, message: `Membership expired on ${expiryStr}! Please renew plan.` }
     }
 
-    // D. Duplicate Attendance Check for Today
-    const startOfDay = new Date()
-    startOfDay.setHours(0, 0, 0, 0)
-
-    const { data: existingCheckIn } = await supabase
-        .from('attendance')
-        .select('id')
-        .eq('gym_id', gymId)
-        .eq('member_id', member.id)
-        .gte('check_in_time', startOfDay.toISOString())
-        .maybeSingle()
-
-    if (existingCheckIn) {
+    if (attendanceRes.data) {
         return {
             success: false,
             message: 'Already checked in today!',
@@ -139,7 +127,7 @@ export async function processMemberCheckIn({ gymId, phone, token }: {
         }
     }
 
-    // E. Log Attendance Entry
+    // 🟢 3. Log Attendance Entry
     const { error: insertErr } = await supabase
         .from('attendance')
         .insert({
@@ -170,35 +158,36 @@ export async function processManualCheckIn({ gymId, memberId }: { gymId: string;
         return { success: false, message: 'Invalid Gym or Member selection.' }
     }
 
-    // 1. Verify Member Status
-    const { data: member, error: memberErr } = await supabase
-        .from('members')
-        .select('id, full_name, status')
-        .eq('gym_id', gymId)
-        .eq('id', memberId)
-        .maybeSingle()
-
-    if (memberErr || !member || member.status !== 'active') {
-        return { success: false, message: 'Member not found or inactive.' }
-    }
-
-    // 2. Prevent Duplicate Check-in Today
     const startOfDay = new Date()
     startOfDay.setHours(0, 0, 0, 0)
 
-    const { data: existingCheckIn } = await supabase
-        .from('attendance')
-        .select('id')
-        .eq('gym_id', gymId)
-        .eq('member_id', memberId)
-        .gte('created_at', startOfDay.toISOString())
-        .maybeSingle()
+    // 🟢 Parallel fetch: Verify Member & Check Duplicate Attendance simultaneously
+    const [memberRes, attendanceRes] = await Promise.all([
+        supabase
+            .from('members')
+            .select('id, full_name, status')
+            .eq('gym_id', gymId)
+            .eq('id', memberId)
+            .maybeSingle(),
+        supabase
+            .from('attendance')
+            .select('id')
+            .eq('gym_id', gymId)
+            .eq('member_id', memberId)
+            .gte('created_at', startOfDay.toISOString())
+            .maybeSingle()
+    ])
 
-    if (existingCheckIn) {
+    const member = memberRes.data
+    if (memberRes.error || !member || member.status !== 'active') {
+        return { success: false, message: 'Member not found or inactive.' }
+    }
+
+    if (attendanceRes.data) {
         return { success: false, message: `${member.full_name} is already checked in today!` }
     }
 
-    // 3. Record Attendance Log
+    // Record Attendance Log
     const { error: insertErr } = await supabase
         .from('attendance')
         .insert({
@@ -210,6 +199,9 @@ export async function processManualCheckIn({ gymId, memberId }: { gymId: string;
     if (insertErr) {
         return { success: false, message: 'Failed to record attendance.' }
     }
+
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/attendance')
 
     return { success: true, message: `Manual check-in logged for ${member.full_name}` }
 }
