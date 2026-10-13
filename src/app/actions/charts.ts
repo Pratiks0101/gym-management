@@ -50,15 +50,12 @@ export async function getMonthlyRevenueTrend(gymId: string, useDummy = false) {
         .gte('created_at', startDate)
         .lte('created_at', endDate)
 
-    if (error || !payments || payments.length === 0) {
-        return DUMMY_REVENUE_DATA // DB empty ya error hone par auto fallback
-    }
+    const validPayments = (!error && payments) ? payments : []
 
-    // Real DB Data Map
-    return last6Months.map((m) => {
-        const revenue = payments
-            .filter((p) => format(new Date(p.created_at), 'yyyy-MM') === m.monthYearKey)
-            .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0)
+    return last6Months.map(m => {
+        const revenue = validPayments
+        .filter((p) => format(new Date(p.created_at), 'yyyy-MM') === m.monthYearKey)
+        .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0)
 
         return {
             month: m.monthLabel,
@@ -94,13 +91,11 @@ export async function getWeeklyAttendanceTrend(gymId: string, useDummy = false) 
         .gte('check_in_time', startDate)
         .lte('check_in_time', endDate)
 
-    if (error || !attendance || attendance.length === 0) {
-        return DUMMY_WEEKLY_ATTENDANCE_DATA
-    }
+        const validAttendance = (!error && attendance) ? attendance : []
 
     // 🟢 Map each day with Morning (before 12 PM) and Evening (after 12 PM) split
     return last7Days.map((day) => {
-        const dayCheckIns = attendance.filter((a) => {
+        const dayCheckIns = validAttendance.filter((a) => {
             const checkInDate = format(new Date(a.check_in_time), 'yyyy-MM-dd')
             return checkInDate === day.dateStr
         })
