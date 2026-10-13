@@ -1,7 +1,7 @@
 'use client'
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { 
     LayoutDashboard, 
     Users, 
@@ -21,8 +21,9 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarRail,
+    useSidebar,
 } from "@/components/ui/sidebar"
-import { createClient } from "@/lib/supabase/client"
+
 import { getInitials } from "@/lib/utils"
 import { LogoutButton } from "./auth/Logout"
 
@@ -33,7 +34,7 @@ type AppSidebarProps = {
 
 export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
     const pathname = usePathname()
-    const router = useRouter()
+    const { setOpenMobile } = useSidebar()
 
     const navItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -83,7 +84,11 @@ export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
 
                         return (
                             <SidebarMenuItem key={item.href} className="cursor-pointer">
-                                <Link href={item.href} className="w-full">
+                                <Link 
+                                    href={item.href} 
+                                    className="w-full"
+                                    onClick={() => setOpenMobile(false)}
+                                >
                                     <SidebarMenuButton
                                         isActive={isActive}
                                         tooltip={item.label}

@@ -72,6 +72,54 @@ export async function getExpiringSubscriptions(gymId: string, daysAhead: number 
     })) as ExpiringMember[]
 }
 
+// Fetch expired member list
+export async function getExpiredSubscriptions(gymId: string) {
+    const supabase = await createClient()
+    const today = new Date().toISOString().split('T')[0]
+
+    const { data, error } = await supabase
+        .from('subscriptions')
+        .select(`
+            id,
+            end_date,
+            status,
+            members!inner(id, full_name, phone, photo_url, gym_id),
+            membership_plans(plan_name)
+        `)
+        .eq('members.gym_id', gymId)
+        .lt('end_date', today) // Expiry date pehle ki hai
+        .order('end_date', { ascending: false })
+
+    if (error) {
+        console.error('Error fetching expired subscriptions:', error)
+        return []
+    }
+
+    if (!data || data.length === 0) return []
+
+// For handling duplicate of latested subscription
+    const memberLatestMap = new Map<string, any>()
+
+    for (const sub of data) {
+        const memberObj = Array.isArray(sub.members) ? sub.members[0] : sub.members
+        const memberId = memberObj?.id
+        if (memberId && !memberLatestMap.has(memberId)) {
+            memberLatestMap.set(memberId, { ...sub, memberObj })
+        }
+    }
+
+    const filteredSubs = Array.from(memberLatestMap.values())
+
+    return filteredSubs.map((sub: any) => ({
+        id: sub.memberObj.id,
+        full_name: sub.memberObj.full_name,
+        phone: sub.memberObj.phone,
+        plan_name: (Array.isArray(sub.membership_plans) ? sub.membership_plans[0]?.plan_name : sub.membership_plans?.plan_name) || 'General Plan',
+        end_date: sub.end_date,
+        members: sub.memberObj
+    }))
+}
+
 // Fetch members with pending due amount > 0
 export async function getPendingDues(gymId: string) {
     const supabase = await createClient()

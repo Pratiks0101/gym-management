@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Sparkles, UserCheck } from 'lucide-react'
-import { getExpiringSubscriptions, getPendingDues } from '../actions/whatsapp'
+import { getExpiringSubscriptions, getExpiredSubscriptions, getPendingDues } from '../actions/whatsapp'
 import { getMonthlyRevenueTrend, getWeeklyAttendanceTrend } from '../actions/charts'
 import { getMembershipPlans } from '../actions/plans'
 
@@ -11,6 +11,7 @@ import { getMembershipPlans } from '../actions/plans'
 import { TodayAttendanceWidget } from '@/components/dashboard/TodayAttendaceWidget'
 import { KpiStatsCards } from '@/components/dashboard/KpiStatsCards'
 import { ExpiringSubscriptionsWidget } from '@/components/dashboard/ExpiringSubscriptionsWidget'
+import { ExpiredMembersWidget } from '@/components/dashboard/ExpiredMembersWidget'
 import { RecentTransactionsWidget } from '@/components/dashboard/RecentTransactionsWidget'
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts'
 import { InteractiveCalendarWidget } from '@/components/dashboard/InteractiveCalendarWidget'
@@ -93,6 +94,13 @@ async function ExpiringSection({ gymId, gymName }: { gymId: string, gymName: str
     return <ExpiringSubscriptionsWidget expiringSoon={expiringSoon} gymName={gymName} plans={activePlans} />
 }
 
+async function ExpiredSection({ gymId, gymName }: { gymId: string, gymName: string }) {
+    const expiredMembers = await getExpiredSubscriptions(gymId)
+    const plansResult = await getMembershipPlans()
+    const activePlans = (plansResult.data || []).filter((p: any) => p.is_active ?? true)
+    return <ExpiredMembersWidget expiredMembers={expiredMembers} gymName={gymName} plans={activePlans} />
+}
+
 async function PendingDuesSection({ gymId, gymName }: { gymId: string, gymName: string }) {
     const pendingDues = await getPendingDues(gymId)
     return <PendingDuesCard pendingDues={pendingDues} gymName={gymName} />
@@ -160,6 +168,10 @@ export default async function DashboardPage() {
 
                     <Suspense fallback={<WidgetSkeleton />}>
                         <ExpiringSection gymId={gym.id} gymName={gym.name} />
+                    </Suspense>
+
+                    <Suspense fallback={<WidgetSkeleton />} >
+                        <ExpiredSection gymId={gym.id} gymName={gym.name} />
                     </Suspense>
 
                     <Suspense fallback={<WidgetSkeleton />}>

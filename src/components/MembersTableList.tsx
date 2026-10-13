@@ -27,7 +27,7 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
     const [selectedDuration, setSelectedDuration] = useState<string>('all')
     const [searchTerm, setSearchTerm] = useState('')
 
-    // 🟢 Dynamic Durations List Extract karo
+    // Dynamic Durations List Extract karo
     const availableDurations = useMemo(() => {
         const durations = activePlans
             .map((plan: any) => Number(plan.duration_months))
@@ -38,7 +38,7 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
         return unique
     }, [activePlans])
 
-    // 🟢 Combined Dynamic Filter Logic: Search + Dynamic Duration
+    // Combined Dynamic Filter Logic: Search + Dynamic Duration
     const filteredMembers = initialMembers.filter((member: any) => {
         // 1. Search Filter (Name or Phone)
         const nameMatch = member.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -47,7 +47,7 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
 
         if (!matchesSearch) return false
 
-        // 2. Dynamic Duration Filter
+        // Dynamic Duration Filter
         if (selectedDuration === 'all') return true
 
         const sortedSubs = [...(member.subscriptions || [])].sort(
@@ -68,7 +68,7 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
                         Registered Members ({filteredMembers.length})
                     </h2>
 
-                    {/* 🔍 Search Box */}
+                    {/* Search Box */}
                     <div className="relative w-full sm:w-64">
                         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
@@ -89,32 +89,34 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
                     </div>
                 </div>
 
-                {/* 🟢 Dynamic Duration Filter Buttons */}
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto self-start sm:self-end">
-                    <button
-                        onClick={() => setSelectedDuration('all')}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-                            selectedDuration === 'all'
+                {/* Dynamic Duration Filter Buttons */}
+                <div className="w-full overflow-x-auto pb-1 custom-scrollbar">
+                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto self-start sm:self-end">
+                        <button
+                            onClick={() => setSelectedDuration('all')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                                selectedDuration === 'all'
                                 ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs border border-slate-200/50 dark:border-slate-700"
                                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
-                        }`}
-                    >
-                        All Members
-                    </button>
+                            }`}
+                            >
+                            All Members
+                        </button>
 
-                    {availableDurations.map((duration) => (
-                        <button
+                        {availableDurations.map((duration) => (
+                            <button
                             key={duration}
                             onClick={() => setSelectedDuration(String(duration))}
                             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                                 selectedDuration === String(duration)
-                                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs border border-slate-200/50 dark:border-slate-700"
-                                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
+                                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs border border-slate-200/50 dark:border-slate-700"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
                             }`}
-                        >
-                            {duration} {duration === 1 ? 'Month' : 'Months'}
-                        </button>
-                    ))}
+                            >
+                                {duration} {duration === 1 ? 'Month' : 'Months'}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
