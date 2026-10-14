@@ -22,7 +22,6 @@ type PaymentRecord = {
     members?: { full_name: string } | null
 }
 
-const calenderCache = new Map<string, {attendance: AttendanceRecord[], payments: PaymentRecord[]}>()
 
 export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
     const [mounted, setMounted] = useState(false)
@@ -39,19 +38,10 @@ export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
     useEffect(() => {
         if (!gymId || !selectedDate) return
 
-        const cacheKey = `${gymId}_${format(selectedDate, 'yyyy-MM-dd')}`
-
-        if(calenderCache.has(cacheKey)) {
-            const cached = calenderCache.get(cacheKey)!
-            setAttendances(cached.attendance)
-            setPayments(cached.payments)
-            return
-        }
-
         const supabase = createClient()
 
-        async function fetchDateDetails() {
-            setLoading(true)
+        async function fetchDateDetails(isBackground = false) {
+            if(!isBackground) setLoading(true)
 
             // Calculate precise local start and end of day
             const year = selectedDate.getFullYear()
@@ -84,18 +74,31 @@ export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
                     const fetchedAtt = (attData.data as any) || []
                     const fetchedPay = (payData.data as any) || []
 
-                    calenderCache.set(cacheKey, {attendance: fetchedAtt, payments: fetchedPay})
+                    // calenderCache.set(cacheKey, {attendance: fetchedAtt, payments: fetchedPay})
 
                     setAttendances(fetchedAtt)
                     setPayments(fetchedPay)
             } catch (err) {
                 console.error("Calender fetch error:", err)
             } finally {
-                setLoading(false)
+                if(!isBackground) setLoading(false)
             }
         }
 
         fetchDateDetails()
+
+        const channel = supabase
+            .channel(`calender-live-${gymId}`)
+            .on(
+                'postgres_changes',
+                {event: 'INSERT', schema: 'public', table: 'attendace', filter: `gym_id=eq.${gymId}`},
+                () => {fetchDateDetails(true)}
+            )
+            .subscribe()
+
+            return () => {
+                supabase.removeChannel(channel)
+            }
     }, [selectedDate, gymId])
 
     const handleDateSelect = (date: Date | undefined) => {
@@ -148,7 +151,7 @@ export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
                 </div>
             </div>
 
-            {isFetching ? (
+            {isFetching && attendances.length === 0 ? (
                 <div className="py-8 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
                     <Loader2 className="w-4 h-4 animate-spin text-emerald-600" /> Loading date records...
                 </div>
