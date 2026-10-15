@@ -22,19 +22,19 @@ import { DeleteMemberButton } from "./DeleteMemberButton"
 type MembersTableListProps = {
     initialMembers: any[]
     activePlans: any[]
-    totalMembers: number
-    currentDuration: string
 }
 
-export default function MembersTableList({ initialMembers, activePlans, totalMembers, currentDuration }: MembersTableListProps) {
+export default function MembersTableList({ initialMembers, activePlans }: MembersTableListProps) {
     const router = useRouter()
     const [members, setMembers] = useState(initialMembers)
+    const [selectedDuration, setSelectedDuration] = useState<string>('all')
     const [searchTerm, setSearchTerm] = useState('')
 
     useEffect(() => {
         setMembers(initialMembers)
     }, [initialMembers])
 
+    // Pre-process members using useMemo for lightning-fast rendering
     const processedMembers = useMemo(() => {
         return members.map((member: any) => {
             const sortedSubs = [...(member.subscriptions || [])].sort(
@@ -58,14 +58,19 @@ export default function MembersTableList({ initialMembers, activePlans, totalMem
         })
     }, [members])
 
-    // Fast Search Filtering on current loaded page
+    // Instant Client-Side Filtering (Search + Duration)
     const filteredMembers = useMemo(() => {
-        if (!searchTerm.trim()) return processedMembers
-        const q = searchTerm.toLowerCase()
         return processedMembers.filter((member: any) => {
-            return member.full_name?.toLowerCase().includes(q) || member.phone?.includes(q)
+            const nameMatch = member.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+            const phoneMatch = member.phone?.includes(searchTerm)
+            const matchesSearch = nameMatch || phoneMatch
+
+            if (!matchesSearch) return false
+            if (selectedDuration === 'all') return true
+
+            return String(member.durationMonths) === selectedDuration
         })
-    }, [processedMembers, searchTerm])
+    }, [processedMembers, searchTerm, selectedDuration])
 
     const availableDurations = useMemo(() => {
         const durations = activePlans
@@ -75,74 +80,66 @@ export default function MembersTableList({ initialMembers, activePlans, totalMem
         return Array.from(new Set(durations)).sort((a: number, b: number) => a - b)
     }, [activePlans])
 
-    // Optimistic Local Handler for Deletion (Ab properly linked hai)
-    const handleMemberDeleted = (memberId: string) => {
-        setMembers((prev) => prev.filter((m) => m.id !== memberId))
-        router.refresh()
-    }
-
     return (
         <div className="space-y-4">
-            {/* Top Bar: Header + Search + Dynamic Filter Buttons */}
-            <div className="flex flex-col gap-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                        Registered Members ({totalMembers})
-                    </h2>
+            {/* Top Bar: Header + Search */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Registered Members ({filteredMembers.length})
+                </h2>
 
-                    {/* Search Box */}
-                    <div className="relative w-full sm:w-64">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Search name or phone..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition shadow-xs"
-                        />
-                        {searchTerm && (
-                            <button
-                                onClick={() => setSearchTerm('')}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                            >
-                                <X className="w-3.5 h-3.5" />
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                {/* Dynamic Duration Filter Buttons */}
-                <div className="w-full overflow-x-auto pb-1 custom-scrollbar">
-                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 w-max sm:w-auto sm:self-end">
+                {/* Search Box */}
+                <div className="relative w-full sm:w-64">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Search name or phone..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition shadow-xs"
+                    />
+                    {searchTerm && (
                         <button
-                            onClick={() => router.push('/dashboard/members?duration=all')}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-                                currentDuration === 'all'
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* 🟢 Duration Filter Bar with justify-between layout */}
+            <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 w-full">
+                <div className="flex items-center justify-between gap-1 w-full">
+                    <button
+                        onClick={() => setSelectedDuration('all')}
+                        className={`flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all text-center whitespace-nowrap cursor-pointer ${
+                            selectedDuration === 'all'
+                            ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs border border-slate-200/50 dark:border-slate-700"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                    >
+                        All Members
+                    </button>
+
+                    {availableDurations.map((duration) => (
+                        <button
+                            key={duration}
+                            onClick={() => setSelectedDuration(String(duration))}
+                            className={`flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all text-center whitespace-nowrap cursor-pointer ${
+                                selectedDuration === String(duration)
                                 ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs border border-slate-200/50 dark:border-slate-700"
                                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                             }`}
                         >
-                            All Members
+                            {duration} {duration === 1 ? 'Month' : 'Months'}
                         </button>
-
-                        {availableDurations.map((duration) => (
-                            <button
-                                key={duration}
-                                onClick={() => router.push(`/dashboard/members?duration=${duration}`)}
-                                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-                                    currentDuration === String(duration)
-                                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs border border-slate-200/50 dark:border-slate-700"
-                                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                                }`}
-                            >
-                                {duration} {duration === 1 ? 'Month' : 'Months'}
-                            </button>
-                        ))}
-                    </div>
+                    ))}
                 </div>
             </div>
 
-            {/* Members Table */}
+            {/* Members Table with Fixed Solid Header */}
             {filteredMembers.length === 0 ? (
                 <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-xl p-8 text-center bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-sm">
                     {searchTerm ? (
@@ -152,10 +149,11 @@ export default function MembersTableList({ initialMembers, activePlans, totalMem
                     )}
                 </div>
             ) : (
-                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-x-auto">
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs max-h-155 h-fit overflow-y-auto custom-scrollbar">
                     <Table>
-                        <TableHeader>
-                            <TableRow className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                        {/* 🟢 Fixed solid header color with no hover effect */}
+                        <TableHeader className="sticky top-0 bg-slate-100 dark:bg-slate-800 z-10">
+                            <TableRow className="border-b border-slate-200 dark:border-slate-700 hover:bg-transparent">
                                 <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Member</TableHead>
                                 <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Phone</TableHead>
                                 <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Active Plan</TableHead>
@@ -237,11 +235,9 @@ export default function MembersTableList({ initialMembers, activePlans, totalMem
 
                                                 <EditMemberModal member={member} />
 
-                                                {/* Connected Delete Button with optimistic callback */}
                                                 <DeleteMemberButton 
                                                     memberId={member.id} 
                                                     memberName={member.full_name} 
-                                                    // onDelete={() => handleMemberDeleted(member.id)}
                                                 />
                                             </div>
                                         </TableCell>
