@@ -2,18 +2,20 @@ import { getMembers } from "@/app/actions/members";
 import { getMembershipPlans } from "@/app/actions/plans";
 import RegisterMemberForm from "@/components/RegisterMemberForm";
 import MembersTableList from "@/components/MembersTableList";
+import Link from "next/link";
 
 export default async function MembersPage({searchParams}: {
-    searchParams: Promise<{page?: string}>
+    searchParams: Promise<{page?: string, duration?: string}>
 }) {
 
     const params = await searchParams
     const currentPage = Number(params.page || 1)
+    const currentDuration = params.duration || 'all'
     const pageSize = 30
 
-    // Fetch members and membership plans in parallel
+    // Fetch members and membership plans in parallel with duration filter
     const [membersRes, plansRes] = await Promise.all([
-        getMembers(),
+        getMembers(currentPage, pageSize, currentDuration),
         getMembershipPlans()
     ])
 
@@ -51,11 +53,13 @@ export default async function MembersPage({searchParams}: {
                     )} 
                 </div>
 
-                {/* Registered Members Table Section with Duration Filters & GetInitials */}
-                <div className="lg:col-span-2">
+                {/* Registered Members Table Section */}
+                <div className="lg:col-span-2 space-y-4">
                     <MembersTableList 
                         initialMembers={members} 
                         activePlans={activePlans} 
+                        totalMembers={totalMembers}
+                        currentDuration={currentDuration}
                     />
                     {totalPages > 1 && (
                         <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800 text-xs">
@@ -63,8 +67,8 @@ export default async function MembersPage({searchParams}: {
                                 Showing page <span className="font-bold text-slate-900 dark:text-white">{currentPage}</span> of <span className="font-bold text-slate-900 dark:text-white">{totalPages}</span> ({totalMembers} total members)
                             </p>
                             <div className="flex items-center gap-2">
-                                <a 
-                                    href={`/dashboard/members?page=${currentPage - 1}`}
+                                <Link 
+                                    href={`/dashboard/members?page=${currentPage - 1}&duration=${currentDuration}`}
                                     className={`px-3 py-1.5 rounded-lg border font-medium transition ${
                                     currentPage <= 1 
                                         ? 'pointer-events-none opacity-40 border-slate-200 dark:border-slate-800' 
@@ -72,9 +76,9 @@ export default async function MembersPage({searchParams}: {
                                 }`}
                                 >
                                     Previous
-                                </a>
-                                <a 
-                                    href={`/dashboard/members?page=${currentPage + 1}`}
+                                </Link>
+                                <Link 
+                                    href={`/dashboard/members?page=${currentPage + 1}&duration=${currentDuration}`}
                                     className={`px-3 py-1.5 rounded-lg border font-medium transition ${
                                     currentPage >= totalPages 
                                         ? 'pointer-events-none opacity-40 border-slate-200 dark:border-slate-800' 
@@ -82,7 +86,7 @@ export default async function MembersPage({searchParams}: {
                                 }`}
                                 >
                                     Next
-                                </a>
+                                </Link>
                             </div>
                         </div>
                     )}
