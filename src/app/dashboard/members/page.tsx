@@ -4,7 +4,7 @@ import RegisterMemberForm from "@/components/RegisterMemberForm";
 import MembersTableList from "@/components/MembersTableList";
 
 export default async function MembersPage() {
-    // 🟢 Fetch members and membership plans in parallel for lightning-fast loading
+    // Fetch members and membership plans in parallel
     const [membersRes, plansRes] = await Promise.all([
         getMembers(),
         getMembershipPlans()

@@ -149,7 +149,7 @@ export async function addMember(formData: FormData) {
     revalidatePath('/dashboard')
 }
 
-export async function getMembers() {
+export async function getMembers(page= 1, pageSize = 30) {
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -162,6 +162,9 @@ export async function getMembers() {
         .single()
 
     if(!gym) return { data: [], error: "Gym not found"}
+
+    const start = (page - 1) * pageSize
+    const end = start + pageSize - 1
 
     const { data: members, error } = await supabase
         .from('members')
@@ -186,6 +189,7 @@ export async function getMembers() {
         `)
         .eq('gym_id', gym.id)
         .order('created_at', { ascending: false })
+        .range(start, end)
 
     if(error) {
         return { data: [], error: error.message}
