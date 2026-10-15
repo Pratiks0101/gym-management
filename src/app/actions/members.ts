@@ -149,11 +149,66 @@ export async function addMember(formData: FormData) {
     revalidatePath('/dashboard')
 }
 
-export async function getMembers(page= 1, pageSize = 30) {
+// export async function getMembers(page= 1, pageSize = 30) {
+//     const supabase = await createClient()
+
+//     const { data: { user } } = await supabase.auth.getUser()
+//     if(!user) return { data: [], error: "Unauthorized" }
+
+//     const { data: gym } = await supabase
+//         .from('gyms')
+//         .select('id')
+//         .eq('owner_id', user.id)
+//         .single()
+
+//     if(!gym) return { data: [], error: "Gym not found"}
+
+//     const start = (page - 1) * pageSize
+//     const end = start + pageSize - 1
+
+//     const { data: members, error } = await supabase
+//         .from('members')
+//         .select(`
+//             *,
+//             subscriptions (
+//                 id,
+//                 start_date,
+//                 end_date,
+//                 total_amount,
+//                 amount_paid,
+//                 due_amount,
+//                 payment_status,
+//                 status,
+//                 created_at,
+//                 membership_plans (
+//                     plan_name,
+//                     price,
+//                     duration_months
+//                 )
+//             )
+//         `)
+//         .eq('gym_id', gym.id)
+//         .order('created_at', { ascending: false })
+//         .range(start, end)
+
+//     if(error) {
+//         return { data: [], error: error.message}
+//     }
+
+//     const sortedMembers = (members || []).map((member: any) => {
+//         const subscriptions = member.subscriptions ? [...member.subscriptions] : []
+//         subscriptions.sort((a: any, b: any) => new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime())
+//         return { ...member, subscriptions }
+//     })
+
+//     return { data: sortedMembers, error: null }
+// }
+
+export async function getMembers(page = 1, pageSize = 30) {
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
-    if(!user) return { data: [], error: "Unauthorized" }
+    if(!user) return { data: [], count: 0, error: "Unauthorized" }
 
     const { data: gym } = await supabase
         .from('gyms')
@@ -161,47 +216,47 @@ export async function getMembers(page= 1, pageSize = 30) {
         .eq('owner_id', user.id)
         .single()
 
-    if(!gym) return { data: [], error: "Gym not found"}
+    if(!gym) return { data: [], count: 0, error: "Gym not found"}
 
     const start = (page - 1) * pageSize
     const end = start + pageSize - 1
 
-    const { data: members, error } = await supabase
-        .from('members')
-        .select(`
-            *,
-            subscriptions (
-                id,
-                start_date,
-                end_date,
-                total_amount,
-                amount_paid,
-                due_amount,
-                payment_status,
-                status,
-                created_at,
-                membership_plans (
-                    plan_name,
-                    price,
-                    duration_months
+    // Fetch data and total count simultaneously
+    const [membersRes, countRes] = await Promise.all([
+        supabase
+            .from('members')
+            .select(`
+                *,
+                subscriptions (
+                    id, start_date, end_date, total_amount, amount_paid, due_amount, payment_status, status, created_at,
+                    membership_plans ( plan_name, price, duration_months )
                 )
-            )
-        `)
-        .eq('gym_id', gym.id)
-        .order('created_at', { ascending: false })
-        .range(start, end)
+            `, { count: 'exact' })
+            .eq('gym_id', gym.id)
+            .order('created_at', { ascending: false })
+            .range(start, end),
+            
+        supabase
+            .from('members')
+            .select('*', { count: 'exact', head: true })
+            .eq('gym_id', gym.id)
+    ])
 
-    if(error) {
-        return { data: [], error: error.message}
+    if(membersRes.error) {
+        return { data: [], count: 0, error: membersRes.error.message }
     }
 
-    const sortedMembers = (members || []).map((member: any) => {
+    const sortedMembers = (membersRes.data || []).map((member: any) => {
         const subscriptions = member.subscriptions ? [...member.subscriptions] : []
         subscriptions.sort((a: any, b: any) => new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime())
         return { ...member, subscriptions }
     })
 
-    return { data: sortedMembers, error: null }
+    return { 
+        data: sortedMembers, 
+        count: countRes.count || 0, 
+        error: null 
+    }
 }
 
 export async function deleteMembers(memberId: string) {

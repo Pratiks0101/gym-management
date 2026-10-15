@@ -3,7 +3,14 @@ import { getMembershipPlans } from "@/app/actions/plans";
 import RegisterMemberForm from "@/components/RegisterMemberForm";
 import MembersTableList from "@/components/MembersTableList";
 
-export default async function MembersPage() {
+export default async function MembersPage({searchParams}: {
+    searchParams: Promise<{page?: string}>
+}) {
+
+    const params = await searchParams
+    const currentPage = Number(params.page || 1)
+    const pageSize = 30
+
     // Fetch members and membership plans in parallel
     const [membersRes, plansRes] = await Promise.all([
         getMembers(),
@@ -11,6 +18,8 @@ export default async function MembersPage() {
     ])
 
     const members = membersRes.data || []
+    const totalMembers = membersRes.count || 0
+    const totalPages = Math.ceil(totalMembers / pageSize)
     const plans = plansRes.data || []
     const activePlans = plans.filter((p: any) => p.is_active !== false)
 
@@ -48,6 +57,35 @@ export default async function MembersPage() {
                         initialMembers={members} 
                         activePlans={activePlans} 
                     />
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800 text-xs">
+                            <p className="text-slate-500">
+                                Showing page <span className="font-bold text-slate-900 dark:text-white">{currentPage}</span> of <span className="font-bold text-slate-900 dark:text-white">{totalPages}</span> ({totalMembers} total members)
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <a 
+                                    href={`/dashboard/members?page=${currentPage - 1}`}
+                                    className={`px-3 py-1.5 rounded-lg border font-medium transition ${
+                                    currentPage <= 1 
+                                        ? 'pointer-events-none opacity-40 border-slate-200 dark:border-slate-800' 
+                                        : 'border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                }`}
+                                >
+                                    Previous
+                                </a>
+                                <a 
+                                    href={`/dashboard/members?page=${currentPage + 1}`}
+                                    className={`px-3 py-1.5 rounded-lg border font-medium transition ${
+                                    currentPage >= totalPages 
+                                        ? 'pointer-events-none opacity-40 border-slate-200 dark:border-slate-800' 
+                                        : 'border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                }`}
+                                >
+                                    Next
+                                </a>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
