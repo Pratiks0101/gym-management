@@ -13,7 +13,7 @@ export function DeletePlanButton({ planId, planName }: DeletePlanButtonProps) {
 
     const [isDeleting, setIsDeleting] = useState(false)
 
-    const handleDelete = async (e: React.SubmitEvent) => {
+    const handleDelete = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault()
         const confirmed = window.confirm(`Are you sure you want to delete "${planName}"? This action cannot be undone.`)
         if (!confirmed) return

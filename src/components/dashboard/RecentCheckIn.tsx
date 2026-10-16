@@ -14,9 +14,14 @@ type CheckInLog = {
     } | null
 }
 
-export function RecentCheckIn({ gymId }: { gymId: string }) {
-    const [logs, setLogs] = useState<CheckInLog[]>([])
-    const [loading, setLoading] = useState(true)
+type RecentCheckInProps = {
+    gymId: string
+    initialLogs?: CheckInLog[]
+}
+
+export function RecentCheckIn({ gymId, initialLogs = [] }: RecentCheckInProps) {
+    const [logs, setLogs] = useState<CheckInLog[]>(initialLogs)
+    const [loading, setLoading] = useState(false)
 
     const fetchLogs = useCallback(async () => {
         if (!gymId) return
@@ -36,7 +41,6 @@ export function RecentCheckIn({ gymId }: { gymId: string }) {
         if (!error && data) {
             setLogs(data as unknown as CheckInLog[])
         }
-        setLoading(false)
     }, [gymId])
 
     useEffect(() => {
@@ -44,10 +48,7 @@ export function RecentCheckIn({ gymId }: { gymId: string }) {
 
         const supabase = createClient()
 
-        // 1. Initial Data Fetch
-        fetchLogs()
-
-        // 2. Realtime Listener with Robust Channel Config
+        // Realtime Listener for instant updates when someone checks in
         const channel = supabase
             .channel(`recent-attendance-${gymId}`)
             .on(
@@ -58,18 +59,14 @@ export function RecentCheckIn({ gymId }: { gymId: string }) {
                     table: 'attendance',
                 },
                 (payload) => {
-                    // Check gym_id manually in payload to prevent filter missing issue
                     if (payload.new && payload.new.gym_id === gymId) {
-                        console.log('⚡ Check-in detected via Realtime:', payload)
                         fetchLogs()
                     }
                 }
             )
-            .subscribe((status) => {
-                console.log('Supabase Channel Status:', status)
-            })
+            .subscribe()
 
-        // 3. Fallback Polling (Every 5 Seconds) - Guarantees Auto-Refresh
+        // Fallback Polling every 5 seconds
         const interval = setInterval(() => {
             fetchLogs()
         }, 5000)

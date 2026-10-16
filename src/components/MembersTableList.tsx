@@ -109,7 +109,7 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
                 </div>
             </div>
 
-            {/* 🟢 Duration Filter Bar with justify-between layout */}
+            {/* Duration Filter Bar with justify-between layout */}
             <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 w-full">
                 <div className="flex items-center justify-between gap-1 w-full">
                     <button
@@ -151,7 +151,7 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
             ) : (
                 <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs max-h-155 h-fit overflow-y-auto custom-scrollbar">
                     <Table>
-                        {/* 🟢 Fixed solid header color with no hover effect */}
+                        {/* Fixed solid header color with no hover effect */}
                         <TableHeader className="sticky top-0 bg-slate-100 dark:bg-slate-800 z-10">
                             <TableRow className="border-b border-slate-200 dark:border-slate-700 hover:bg-transparent">
                                 <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Member</TableHead>

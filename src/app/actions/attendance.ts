@@ -15,7 +15,7 @@ export async function generateDeskToken(gymId: string) {
     // Token Validity: 5 Minutes Buffer
     const expiresAt = new Date(timestamp + 5 * 60 * 1000).toISOString()
 
-    // 🟢 Parallel cleanup and insert for lightning fast QR generation
+    // Parallel cleanup and insert for lightning fast QR generation
     await Promise.all([
         supabase
             .from('qr_sessions')
@@ -51,7 +51,7 @@ export async function processMemberCheckIn({ gymId, phone, token }: {
         return { success: false, message: 'Invalid request parameters.' }
     }
 
-    // 🟢 1. Parallel verification: Verify QR Session and Fetch Member simultaneously
+    // 1. Parallel verification: Verify QR Session and Fetch Member simultaneously
     const [qrRes, memberRes] = await Promise.all([
         supabase
             .from('qr_sessions')
@@ -83,7 +83,7 @@ export async function processMemberCheckIn({ gymId, phone, token }: {
         return { success: false, message: 'No registered member found with this phone number.' }
     }
 
-    // 🟢 2. Parallel check: Fetch Subscription and Check Today's Attendance simultaneously
+    // 2. Parallel check: Fetch Subscription and Check Today's Attendance simultaneously
     const startOfDay = new Date()
     startOfDay.setHours(0, 0, 0, 0)
 
@@ -127,7 +127,7 @@ export async function processMemberCheckIn({ gymId, phone, token }: {
         }
     }
 
-    // 🟢 3. Log Attendance Entry
+    // 3. Log Attendance Entry
     const { error: insertErr } = await supabase
         .from('attendance')
         .insert({
@@ -161,7 +161,7 @@ export async function processManualCheckIn({ gymId, memberId }: { gymId: string;
     const startOfDay = new Date()
     startOfDay.setHours(0, 0, 0, 0)
 
-    // 🟢 Parallel fetch: Verify Member & Check Duplicate Attendance simultaneously
+    // Parallel fetch: Verify Member & Check Duplicate Attendance simultaneously
     const [memberRes, attendanceRes] = await Promise.all([
         supabase
             .from('members')

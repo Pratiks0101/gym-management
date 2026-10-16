@@ -7,7 +7,7 @@ import { AddPlanForm } from "@/components/AddPlanForm";
 
 export default async function PlansPage() {
     const result = await getMembershipPlans()
-    const plans = result.data || []
+    const plans = result?.data || []
 
     return (
         <div className="p-6 space-y-8 max-w-6xl mx-auto">
@@ -39,6 +39,10 @@ export default async function PlansPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {plans.map((plan: any) => {
                                 const isActive = plan.is_active ?? true
+                                const handleToggle = async () => {
+                                    'use server'
+                                    await togglePlanStatus(plan.id, isActive)
+                                }
                                 return (
                                     <div 
                                         key={plan.id}
@@ -67,7 +71,7 @@ export default async function PlansPage() {
 
                                         <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 text-xs gap-2">
 
-                                            <form action={async () => { await togglePlanStatus(plan.id, isActive); }}>
+                                            <form action={handleToggle}>
                                                 <button
                                                     type="submit"
                                                     className={`px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${

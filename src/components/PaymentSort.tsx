@@ -26,7 +26,7 @@ type PaymentSortProps = {
     initialPayments: any[]
 }
 
-// 🗓 Deterministic Date Formatter
+// Deterministic Date Formatter
 function formatDate(dateString: string) {
     if (!dateString) return ''
     const date = new Date(dateString)
@@ -276,10 +276,11 @@ export default function PaymentSort({ initialPayments }: PaymentSortProps) {
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden sm:block bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="hidden sm:block bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm max-h-155 overflow-y-auto custom-scrollbar">
                 <Table className="w-full table-fixed">
-                    <TableHeader>
-                        <TableRow className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
+                    <TableHeader className="sticky top-0 bg-slate-100 dark:bg-slate-800 z-10">
+                        {/* <TableRow className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/60"> */}
+                        <TableRow className="border-b border-slate-200 dark:border-slate-700 hover:bg-transparent">
                             <TableHead className="w-[28%] font-semibold text-slate-700 dark:text-slate-300">Date & Time</TableHead>
                             <TableHead className="w-[26%] font-semibold text-slate-700 dark:text-slate-300">Member</TableHead>
                             <TableHead className="w-[22%] font-semibold text-slate-700 dark:text-slate-300">Type</TableHead>
