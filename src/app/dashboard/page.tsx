@@ -52,7 +52,7 @@ async function KpiSection({ gymId }: { gymId: string }) {
     )
 }
 
-// 🟢 Charts Async Section (Optimized Parallel Fetch)
+// Charts Async Section (Optimized Parallel Fetch)
 async function ChartsSection({ gymId }: { gymId: string }) {
     const USE_DUMMY_DATA = false 
     const supabase = await createClient()
@@ -84,7 +84,7 @@ async function ChartsSection({ gymId }: { gymId: string }) {
     )
 }
 
-// 🟢 Expiring Section (Optimized with Promise.all)
+// Expiring Section (Optimized with Promise.all)
 async function ExpiringSection({ gymId, gymName }: { gymId: string, gymName: string }) {
     const [expiringSoon, plansResult] = await Promise.all([
         getExpiringSubscriptions(gymId),
@@ -95,7 +95,7 @@ async function ExpiringSection({ gymId, gymName }: { gymId: string, gymName: str
     return <ExpiringSubscriptionsWidget expiringSoon={expiringSoon} gymName={gymName} plans={activePlans} />
 }
 
-// 🟢 Expired Section (Optimized with Promise.all)
+// Expired Section (Optimized with Promise.all)
 async function ExpiredSection({ gymId, gymName }: { gymId: string, gymName: string }) {
     const [expiredMembers, plansResult] = await Promise.all([
         getExpiredSubscriptions(gymId),
