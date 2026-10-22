@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Multi-Tenant Gym Management SaaS Platform
+
+A production-ready multi-tenant SaaS application designed for gym owners and administrators to streamline membership workflows, track recurring subscriptions, analyze revenue metrics, and prevent unauthorized gym access using a dynamic verification engine.
+
+## Key Features
+
+- **Multi-Tenant Architecture:** Isolated data access for separate gym branches, managing member profiles, active subscriptions, and administrative roles.
+- **Dynamic QR Check-in Engine:** Real-time access verification system featuring 10-second auto-regenerating QR tokens and mobile verification to eliminate proxy check-ins.
+- **Analytics Dashboard:** Visual performance tracking for monthly recurring revenue (MRR), total active members, subscription expirations, and attendance trends.
+- **Web Accessibility (a11y):** Built with strict keyboard navigation, high-contrast UI patterns, and ARIA-compliant component structures.
+
+## Tech Stack
+
+- **Framework:** Next.js (App Router)
+- **Language:** TypeScript
+- **Styling:** React, Tailwind CSS
+- **Database & Auth:** PostgreSQL, Supabase
+- **Deployment & Tooling:** Git, GitHub, Netlify / Vercel
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18.x or higher
+- npm / pnpm / yarn
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Installation
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/Pratiks0101/gym-management.git](https://github.com/Pratiks0101/gym-management.git)
+   cd gym-management
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. Install dependencies:
+   ```bash
+   npm install
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Set up environment variables:
+    Create a .env.local file in the root directory and add your Supabase credentials:
 
-## Learn More
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-To learn more about Next.js, take a look at the following resources:
+4. Run the development server:
+    ```bash
+   npm run dev
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+5. Open http://localhost:3000 in your browser to view the application.
