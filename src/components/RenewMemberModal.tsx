@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from "react"
-import { renewMemberSubscription } from "@/app/actions/members"
-import { RefreshCw, Loader2 } from "lucide-react"
+import { useState, useMemo, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { renewMemberSubscription } from '@/app/actions/members'
+import { RefreshCw, Loader2 } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
@@ -10,7 +11,7 @@ import {
     DialogTitle,
     DialogTrigger,
     DialogFooter,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog'
 
 type Plan = {
     id: string
@@ -31,6 +32,7 @@ type RenewMemberModalProps = {
 }
 
 export default function RenewMemberModal({member, plans, showText = false}: RenewMemberModalProps) {
+    const router = useRouter()
     const [isOpen, setIsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [selectedPlanId, setSelectedPlanId] = useState<string>(plans[0]?.id || '')
@@ -68,16 +70,16 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
         }
     }
 
-    const getTodayString = () => {
+    // Optimized with useMemo so it doesn't recalculate on every keystroke/render
+    const getTodayString = useCallback(() => {
         const today = new Date()
         const yyyy = today.getFullYear()
         const mm = String(today.getMonth() + 1).padStart(2, '0')
         const dd = String(today.getDate()).padStart(2, '0')
         return `${yyyy}-${mm}-${dd}`
-    }
+    }, [])
 
-    // Exact date continuity without +1 day
-    const calculateDefaultStartDate = () => {
+    const calculatedStartDate = useMemo(() => {
         const latestSub = member.subscriptions?.[0]
         const rawEndDate = latestSub?.end_date || member.valid_till
 
@@ -94,9 +96,8 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
             }
         }
         return getTodayString()
-    }
+    }, [member, getTodayString])
 
-    const calculatedStartDate = calculateDefaultStartDate()
     const isAdvanceRenewal = calculatedStartDate !== getTodayString()
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -116,6 +117,10 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
 
         try {
             await renewMemberSubscription(formData)
+            
+            // Refresh server component data so renewed member vanishes instantly
+            router.refresh() 
+
             setIsOpen(false)
             alert('Membership renewed successfully!')
         } catch (error: any) {
@@ -197,7 +202,7 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
                         />
                     </div>
 
-                    {/* 🟢 Payment Summary Box (Similar to Registration Form) */}
+                    {/* Payment Summary Box */}
                     {selectedPlanId && (
                         <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-3">
                             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">

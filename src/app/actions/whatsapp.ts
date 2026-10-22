@@ -72,11 +72,12 @@ export async function getExpiringSubscriptions(gymId: string, daysAhead: number 
     return Array.from(memberLatestMap.values())
 }
 
-// 🟢 Fetch expired member list (Optimized)
+// Fetch expired member list (Optimized)
 export async function getExpiredSubscriptions(gymId: string): Promise<ExpiringMember[]> {
     const supabase = await createClient()
     const today = new Date().toISOString().split('T')[0]
 
+    // Fetch all subscriptions ordered by end_date descending (So the latest/newest subscription for every member comes FIRST)
     const { data, error } = await supabase
         .from('subscriptions')
         .select(`
@@ -87,36 +88,46 @@ export async function getExpiredSubscriptions(gymId: string): Promise<ExpiringMe
             membership_plans(plan_name)
         `)
         .eq('members.gym_id', gymId)
-        .lt('end_date', today)
         .order('end_date', { ascending: false })
 
     if (error || !data || data.length === 0) {
-        if (error) console.error('Error fetching expired subscriptions:', error)
+        if (error) console.error('Error fetching subscriptions:', error)
         return []
     }
 
     const memberLatestMap = new Map<string, any>()
 
+    // Process rows: Since data is sorted descending, the FIRST time we see a member, it is guaranteed to be their LATEST subscription.
     for (const sub of data) {
         const memberObj = Array.isArray(sub.members) ? sub.members[0] : sub.members
         const memberId = memberObj?.id
+
         if (memberId && !memberLatestMap.has(memberId)) {
-            const planObj = Array.isArray(sub.membership_plans) ? sub.membership_plans[0] : sub.membership_plans
+            const rawPlan = sub.membership_plans
+            const planObj = Array.isArray(rawPlan) ? rawPlan[0] : rawPlan
+            const planName = (planObj as any)?.plan_name || 'General Plan'
+            
             memberLatestMap.set(memberId, {
                 id: memberObj.id,
                 full_name: memberObj.full_name,
                 phone: memberObj.phone,
-                plan_name: planObj?.plan_name || 'General Plan',
+                plan_name: planName,
                 end_date: sub.end_date,
+                status: sub.status,
                 members: memberObj
             })
         }
     }
 
-    return Array.from(memberLatestMap.values())
+    // Filter: Keep only those whose LATEST subscription end_date is strictly in the past (< today)
+    const trulyExpired = Array.from(memberLatestMap.values()).filter(sub => {
+        return sub.end_date < today
+    })
+
+    return trulyExpired
 }
 
-// 🟢 Fetch members with pending due amount > 0 (Optimized)
+// Fetch members with pending due amount > 0 (Optimized)
 export async function getPendingDues(gymId: string): Promise<PendingDueMember[]> {
     const supabase = await createClient()
 
