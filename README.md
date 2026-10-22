@@ -37,7 +37,7 @@ A production-ready multi-tenant SaaS application designed for gym owners and adm
 3. Set up environment variables:
     Create a .env.local file in the root directory and add your Supabase credentials:
 
-   ```
+   ```code snippet
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
