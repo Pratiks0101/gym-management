@@ -174,7 +174,7 @@ export async function processManualCheckIn({ gymId, memberId }: { gymId: string;
             .select('id')
             .eq('gym_id', gymId)
             .eq('member_id', memberId)
-            .gte('created_at', startOfDay.toISOString())
+            .gte('check_in_time', startOfDay.toISOString())
             .maybeSingle()
     ])
 
