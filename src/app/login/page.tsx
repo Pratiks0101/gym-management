@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { login } from "../auth/actions";
+import { login, requestPasswordReset } from "../auth/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export default async function LoginPage({searchParams}:{
-    searchParams: Promise<{ error?: string}>
+    searchParams: Promise<{ error?: string; reset?: string}>
 }) {
-    const { error } = await searchParams
+    const { error, reset } = await searchParams
     
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
@@ -24,8 +24,17 @@ export default async function LoginPage({searchParams}:{
                         </div>
                     )}
 
+                    {reset === "success" && (
+                        <div className="mb-4 rounded-md bg-emerald-500/15 p-3 text-sm text-emerald-700 dark:text-emerald-400 font-medium">
+                            Password updated successfully. Please sign in with your new password.
+                        </div>
+                    )}
+
                     {/* Using Client Form with Loading State */}
-                    <LoginForm loginAction={login} />
+                    <LoginForm 
+                        loginAction={login}
+                        requestPasswordResetAction={requestPasswordReset}
+                        />
 
                     <div className="mt-4 text-center text-sm text-muted-foreground">
                         Don&apos;t have an account?{' '}
