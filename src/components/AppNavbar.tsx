@@ -46,7 +46,9 @@ export function AppNavbar({ gymName, ownerEmail, logoUrl, bannerUrl, onPreviewIm
         <header 
             className={`relative border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 flex items-center justify-between top-0 z-10 overflow-hidden transition-all ${
                 // Adjust header height based on whether a banner is present
-                hasBanner ? "h-44 sm:h-48 md:h-52" : "h-16"
+                hasBanner 
+                    ? "h-44 sm:h-48 md:h-52 items-end pb-4 sm:pb-6" 
+                    : "h-16 items-center"
             }`}
         >
 
@@ -77,28 +79,32 @@ export function AppNavbar({ gymName, ownerEmail, logoUrl, bannerUrl, onPreviewIm
             <div className="relative z-10 flex items-center gap-2 sm:gap-3 min-w-0">
                 <SidebarTrigger 
                     title={open ? 'Close Sidebar' : 'Open Sidebar'}
-                    className={
+                    className={`shrink-0 ${
                         hasBanner
                             ? "text-white hover:bg-white/15"
                             : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    }
+                    }`}
                 />
                 
-                <h1 
-                    className={`text-sm sm:text-base font-bold truncate max-w-44 sm:max-w-xs ${
-                        hasBanner ? "text-white drop-shadow-xs" : "text-slate-900 dark:text-white"
-                    }`}
-                >
-                    {gymName}
-                </h1>
-                <span className="text-[10px] sm:text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 font-semibold shrink-0">
-                    Live
-                </span>
+                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                    <h1 
+                        className={`truncate transition-all ${
+                            hasBanner 
+                                ? "text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white drop-shadow-sm max-w-48 sm:max-w-md md:max-w-xl" 
+                                : "text-sm sm:text-base font-bold text-slate-900 dark:text-white max-w-44 sm:max-w-xs"
+                        }`}
+                    >
+                        {gymName}
+                    </h1>
+                    <span className="text-[10px] sm:text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 font-semibold shrink-0">
+                        Live
+                    </span>
+                </div>
             </div>
 
             {/* Right Section: Theme Toggle & User Dropdown */}
             <div className="relative z-10 flex items-center gap-3 shrink-0">
-                <div className={hasBanner ? "rounded-lg bg-slate-900/60 text-white" : ""}>
+                <div className={hasBanner ? "rounded-lg bg-slate-900/60 backdrop-blur-sm text-white" : ""}>
                     <ThemeToggle />
                 </div>
 
@@ -108,7 +114,9 @@ export function AppNavbar({ gymName, ownerEmail, logoUrl, bannerUrl, onPreviewIm
                     renderTrigger={(branding) => (
                         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                             <DropdownMenuTrigger className={`outline-none flex items-center gap-2.5 p-1 rounded-lg transition-colors cursor-pointer ${
-                                hasBanner ? "hover:bg-white/15" : "hover:bg-slate-100 dark:hover:bg-slate-800"
+                                hasBanner 
+                                    ? "bg-slate-900/60 hover:bg-slate-900/80 backdrop-blur-sm border border-white/10" 
+                                    : "hover:bg-slate-100 dark:hover:bg-slate-800"
                             }`}>
                                 <Avatar className="w-8 h-8">
                                     {( showLogoInAvatar && logoUrl) ? (
@@ -118,7 +126,7 @@ export function AppNavbar({ gymName, ownerEmail, logoUrl, bannerUrl, onPreviewIm
                                             width={32}
                                             height={32}
                                             onError={() => setLogoLoadfailed(true)}
-                                            className="rounded-full"
+                                            className="rounded-full object-cover"
                                         />
                                     ) : (
                                         <AvatarFallback className="bg-emerald-600 text-white font-bold text-xs">
