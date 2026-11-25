@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
 import { AlertCircle, Search, X } from "lucide-react"
 import { getInitials } from "@/lib/utils"
 import { getMemberStatus } from "@/lib/subscription"
@@ -19,26 +18,45 @@ import {
 import EditMemberModal from "./EditMemberModal"
 import { DeleteMemberButton } from "./DeleteMemberButton"
 
+type MembershipPlan = {
+    id: string
+    price: number
+    plan_name?: string | null
+    duration_months?: number | string | null
+}
+
+type MemberSubscription = {
+    id: string
+    created_at?: string | null
+    start_date?: string | null
+    end_date?: string | null
+    due_amount?: number | string | null
+    membership_plans?: MembershipPlan | null
+}
+
+type Member = {
+    id: string
+    full_name: string
+    phone?: string | null
+    photo_url?: string | null
+    valid_till?: string | null
+    subscriptions?: MemberSubscription[]
+}
+
 type MembersTableListProps = {
-    initialMembers: any[]
-    activePlans: any[]
+    initialMembers: Member[]
+    activePlans: MembershipPlan[]
 }
 
 export default function MembersTableList({ initialMembers, activePlans }: MembersTableListProps) {
-    const router = useRouter()
-    const [members, setMembers] = useState(initialMembers)
     const [selectedDuration, setSelectedDuration] = useState<string>('all')
     const [searchTerm, setSearchTerm] = useState('')
 
-    useEffect(() => {
-        setMembers(initialMembers)
-    }, [initialMembers])
-
     // Pre-process members using useMemo for lightning-fast rendering
     const processedMembers = useMemo(() => {
-        return members.map((member: any) => {
+        return initialMembers.map((member) => {
             const sortedSubs = [...(member.subscriptions || [])].sort(
-                (a: any, b: any) => new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime()
+            (a, b) => new Date(b.created_at || b.start_date || 0).getTime() - new Date(a.created_at || a.start_date || 0).getTime()
             )
             const latestSub = sortedSubs[0]
             const planName = latestSub?.membership_plans?.plan_name || 'N/A'
@@ -56,11 +74,11 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
                 dueAmount
             }
         })
-    }, [members])
+    }, [initialMembers])
 
     // Instant Client-Side Filtering (Search + Duration)
     const filteredMembers = useMemo(() => {
-        return processedMembers.filter((member: any) => {
+        return processedMembers.filter((member) => {
             const nameMatch = member.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
             const phoneMatch = member.phone?.includes(searchTerm)
             const matchesSearch = nameMatch || phoneMatch
@@ -74,10 +92,10 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
 
     const availableDurations = useMemo(() => {
         const durations = activePlans
-            .map((plan: any) => Number(plan.duration_months))
-            .filter((d: number) => !isNaN(d) && d > 0)
+            .map((plan) => Number(plan.duration_months))
+            .filter((duration) => !isNaN(duration) && duration > 0)
 
-        return Array.from(new Set(durations)).sort((a: number, b: number) => a - b)
+        return Array.from(new Set(durations)).sort((a, b) => a - b)
     }, [activePlans])
 
     return (
@@ -163,12 +181,12 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
                             </TableRow>
                         </TableHeader>
                         <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {filteredMembers.map((member: any) => {
+                            {filteredMembers.map((member) => {
                                 const endDate = member.rawEndDate  
                                     ? new Date(member.rawEndDate).toLocaleDateString('en-IN') 
                                     : 'N/A'
                                 
-                                const statusInfo = getMemberStatus(member.rawEndDate)
+                                const statusInfo = getMemberStatus(member.rawEndDate ?? null)
 
                                 return (
                                     <TableRow 
@@ -231,9 +249,24 @@ export default function MembersTableList({ initialMembers, activePlans }: Member
                                                         dueAmount={member.dueAmount}
                                                     />
                                                 )}
-                                                <RenewMemberModal member={member} plans={activePlans} />
+                                                <RenewMemberModal
+                                                    member={{
+                                                        ...member,
+                                                        valid_till: member.valid_till ?? undefined,
+                                                        subscriptions: member.subscriptions?.flatMap((subscription) =>
+                                                            typeof subscription.end_date === 'string'
+                                                                ? [{ ...subscription, end_date: subscription.end_date }]
+                                                                : []
+                                                        ),
+                                                    }}
+                                                    plans={activePlans.map((plan) => ({
+                                                        ...plan,
+                                                        plan_name: plan.plan_name ?? '',
+                                                        duration_months: Number(plan.duration_months ?? 0),
+                                                    }))}
+                                                />
 
-                                                <EditMemberModal member={member} />
+                                                <EditMemberModal member={{ ...member, phone: member.phone ?? '' }} />
 
                                                 <DeleteMemberButton 
                                                     memberId={member.id} 

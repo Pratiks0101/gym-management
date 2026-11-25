@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react"
 import { generateDeskToken } from "@/app/actions/attendance"
 import { createClient } from "@/lib/supabase/client"
 import { QRCodeSVG } from 'qrcode.react'
@@ -11,10 +11,12 @@ type Props = {
     initialToken: string
 }
 
+const subscribeToOrigin = () => () => {}
+
 export function DeskDisplayClient({ gymId, initialToken }: Props) {
     const [token, setToken] = useState<string | null>(initialToken)
     const [timeLeft, setTimeLeft] = useState(10)
-    const [originUrl, setOriginUrl] = useState('')
+    const originUrl = useSyncExternalStore(subscribeToOrigin, () => window.location.origin, () => '')
     const [lastScannedMember, setLastScannedMember] = useState<{
         name: string
         status: string
@@ -22,39 +24,47 @@ export function DeskDisplayClient({ gymId, initialToken }: Props) {
     } | null>(null)
 
     const audioRef = useRef<HTMLAudioElement | null>(null)
+    const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setOriginUrl(window.location.origin)
+    const clearBannerTimeout = useCallback(() => {
+        if (bannerTimeoutRef.current) {
+            clearTimeout(bannerTimeoutRef.current)
+            bannerTimeoutRef.current = null
         }
     }, [])
 
-    const refreshToken = useCallback(async () => {
-        if (!gymId) return
-        try {
-            const res = await generateDeskToken(gymId)
-            if (res?.success && res?.token) {
-                setToken(res.token)
-                setTimeLeft(10)
+    // Count down and refresh from the timer callback, retrying failed requests.
+    useEffect(() => {
+        let remaining = 10
+        let refreshing = false
+        let active = true
+
+        const timer = setInterval(async () => {
+            if (remaining > 0) {
+                remaining -= 1
+                setTimeLeft(remaining)
             }
-        } catch (err) {
-            console.error('Error refreshing token:', err)
+
+            if (remaining !== 0 || refreshing || !gymId) return
+            refreshing = true
+            try {
+                const res = await generateDeskToken(gymId)
+                if (active && res?.success && res?.token) {
+                    setToken(res.token)
+                    remaining = 10
+                    setTimeLeft(remaining)
+                }
+            } catch (err) {
+                console.error('Error refreshing token:', err)
+            } finally {
+                refreshing = false
+            }
+        }, 1000)
+        return () => {
+            active = false
+            clearInterval(timer)
         }
     }, [gymId])
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    refreshToken()
-                    return 10
-                }
-                return prev - 1
-            })
-        }, 1000)
-
-        return () => clearInterval(timer)
-    }, [refreshToken])
 
     useEffect(() => {
         if (!gymId) return
@@ -87,9 +97,10 @@ export function DeskDisplayClient({ gymId, initialToken }: Props) {
                         if (audioRef.current) {
                             audioRef.current.play().catch(() => {})
                         }
-
-                        setTimeout(() => {
+                        clearBannerTimeout()
+                        bannerTimeoutRef.current = setTimeout(() => {
                             setLastScannedMember(null)
+                            bannerTimeoutRef.current = null
                         }, 4000)
                     }
                 }
@@ -97,9 +108,10 @@ export function DeskDisplayClient({ gymId, initialToken }: Props) {
             .subscribe()
 
         return () => {
+            clearBannerTimeout()
             supabase.removeChannel(channel)
         }
-    }, [gymId])
+    }, [gymId, clearBannerTimeout])
 
     const checkInUrl = token && gymId && originUrl
         ? `${originUrl}/checkin?token=${token}&gym=${gymId}`

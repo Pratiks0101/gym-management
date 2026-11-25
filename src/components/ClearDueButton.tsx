@@ -39,8 +39,8 @@ export default function ClearDueButton({subscriptionId, memberId, memberName, du
             await clearMemberDue(formData)
             setOpen(false)
             alert("Due amount cleared successfully!")
-        } catch (err: any) {
-            alert(err.message || "Failed to clear due amount")
+        } catch (err: unknown) {
+            alert( err instanceof Error ? err.message : "Failed to clear due amount")
         } finally {
             setLoading(false)
         }

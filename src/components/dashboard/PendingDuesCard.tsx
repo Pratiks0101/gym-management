@@ -40,7 +40,7 @@ export function PendingDuesCard({ pendingDues, gymName = 'Gym' }: Props) {
     const filteredPendingDue = useMemo(() => {
         if (!searchQuery.trim()) return pendingDues
         const q = searchQuery.toLowerCase()
-        return pendingDues.filter((due: any) => {
+        return pendingDues.filter((due: PendingDueItem) => {
             const fullName = due.full_name || due.members?.full_name || ''
             const phone = due.phone || due.members?.phone || ''
             return fullName.toLowerCase().includes(q) || phone.includes(q)
@@ -75,8 +75,8 @@ export function PendingDuesCard({ pendingDues, gymName = 'Gym' }: Props) {
             } else {
                 alert("Failed to clear due amount.")
             }
-        } catch (err: any) {
-            alert(err.message || "Failed to clear due amount.")
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : "Failed to clear due amount.")
         } finally {
             setIsSubmitting(false)
         }
@@ -138,7 +138,7 @@ export function PendingDuesCard({ pendingDues, gymName = 'Gym' }: Props) {
                         )}
 
                         {/* List Container */}
-                        <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[380px] overflow-y-auto pr-1">
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-95 overflow-y-auto pr-1">
                             {filteredPendingDue.length === 0 ? (
                                 <p className="text-xs text-slate-400 text-center py-4">No matching members found.</p>
                             ) : (

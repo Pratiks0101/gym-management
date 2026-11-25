@@ -21,7 +21,7 @@ type RecentCheckInProps = {
 
 export function RecentCheckIn({ gymId, initialLogs = [] }: RecentCheckInProps) {
     const [logs, setLogs] = useState<CheckInLog[]>(initialLogs)
-    const [loading, setLoading] = useState(false)
+    const [loading] = useState(false)
 
     const fetchLogs = useCallback(async () => {
         if (!gymId) return

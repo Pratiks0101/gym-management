@@ -1,12 +1,19 @@
 'use client'
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useRef } from "react"
 import PhotoUpload from "./PhotoUpload"
 import { addMember } from "@/app/actions/members"
 import { Loader2 } from "lucide-react"
 
+type Plan = {
+    id: string | number
+    plan_name: string
+    price: number | string
+    duration_months: number
+}
+
 type RegisterMemberFormProp = {
-    plans: any[]
+    plans: Plan[]
 }
 
 export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
@@ -14,42 +21,23 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
     const [loading, setLoading] = useState(false)
     const [uploadKey, setUploadKey] = useState(0)
     const [selectedPlanId, setSelectedPlanId] = useState<string>("")
-    const [planPrice, setPlanPrice] = useState<number>(0)
     const [discount, setDiscount] = useState<number | string>("")
-    const [amountPaid, setAmountPaid] = useState<number | string>("")
+    const [amountPaidOverride, setAmountPaidOverride] = useState<number | string | null>(null)
 
     // Ref for auto-focusing the first field
     const nameInputRef = useRef<HTMLInputElement>(null)
 
-    useEffect(() => {
-        const foundPlan = plans.find((p) => p.id === selectedPlanId)
-        if (foundPlan) {
-            const price = Number(foundPlan.price || 0)
-            setPlanPrice(price)
-            setAmountPaid(price)
-            setDiscount("")
-        } else {
-            setPlanPrice(0)
-            setAmountPaid("")
-            setDiscount("")
-        }
-    }, [selectedPlanId, plans])
-
+    const foundPlan = plans.find((p) => String(p.id) === selectedPlanId)
+    const planPrice = Number(foundPlan?.price || 0)
     const numDiscount = Number(discount || 0)
     const finalTotal = Math.max(0, planPrice - numDiscount)
+    const amountPaid = foundPlan ? (amountPaidOverride ?? finalTotal) : ""
     const numPaid = amountPaid === "" ? 0 : Number(amountPaid)
     const calculatedDue = Math.max(0, finalTotal - numPaid)
 
     const handleDiscountChange = (valStr: string) => {
-        if(valStr === '') {
-            setDiscount('')
-            setAmountPaid(planPrice)
-        } else {
-            const valNum = Number(valStr)
-            setDiscount(valNum)
-            const calculatedTotal = Math.max(0, planPrice - valNum)
-            setAmountPaid(calculatedTotal)
-        }
+        setDiscount(valStr === '' ? '' : Number(valStr))
+        setAmountPaidOverride(null)
     }
 
     const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
@@ -68,15 +56,14 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
             form.reset()
             setSelectedFile(null)
             setSelectedPlanId("")
-            setPlanPrice(0)
             setDiscount("")
-            setAmountPaid("")
+            setAmountPaidOverride(null)
             setUploadKey((prevKey) => prevKey + 1)
             
             alert('Member registered successfully!')
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error)
-            alert(error.message || 'Failed to register member')
+            alert(error instanceof Error ? error.message : 'Failed to register member')
         } finally {
             setLoading(false)
 
@@ -173,12 +160,16 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
                     id="plan_id" 
                     value={selectedPlanId}
                     disabled={loading}
-                    onChange={(e) => setSelectedPlanId(e.target.value)}
+                    onChange={(e) => {
+                        setSelectedPlanId(e.target.value)
+                        setDiscount("")
+                        setAmountPaidOverride(null)
+                    }}
                     required
                     className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition disabled:bg-slate-100 dark:disabled:bg-slate-900 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     <option value="">Select a plan...</option>
-                    {plans.map((plan: any) => (
+                    {plans.map((plan) => (
                         <option key={plan.id} value={plan.id}>
                             {plan.plan_name} - ₹{plan.price} ({plan.duration_months} mo)
                         </option>
@@ -226,6 +217,7 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
                                 min="0"
                                 disabled={loading}
                                 placeholder="0"
+                                value={discount}
                                 onChange={(e) => {
                                     handleDiscountChange(e.target.value)
                                 }}
@@ -250,7 +242,7 @@ export default function RegisterMemberForm({ plans }: RegisterMemberFormProp) {
                                 value={amountPaid}
                                 onChange={(e) => {
                                     const val = e.target.value
-                                    setAmountPaid(val === "" ? "" : Number(val))
+                                    setAmountPaidOverride(val === "" ? "" : Number(val))
                                 }}
                                 className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition disabled:bg-slate-100 dark:disabled:bg-slate-900 disabled:opacity-60 disabled:cursor-not-allowed"
                             />

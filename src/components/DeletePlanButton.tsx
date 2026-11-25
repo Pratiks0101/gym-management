@@ -21,8 +21,8 @@ export function DeletePlanButton({ planId, planName }: DeletePlanButtonProps) {
         setIsDeleting(true)
         try {
             await deleteMembershipPlan(planId)
-        } catch (error: any) {
-            alert(error.message || 'Failed to delete plan')
+        } catch (error: unknown) {
+            alert(error instanceof Error ? error.message : 'Failed to delete plan')
             setIsDeleting(false)
         }
     }

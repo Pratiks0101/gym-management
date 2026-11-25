@@ -6,10 +6,27 @@ import { AlertTriangle, MessageCircle, Search, X } from 'lucide-react'
 import { generateMembershipRenewalReminderLink } from '@/lib/whatsapp'
 import RenewMemberModal from '../RenewMemberModal'
 
+type ExpiredMember = {
+    id?: string | number
+    member_id?: string | number
+    full_name?: string | null
+    phone?: string | null
+    plan_name?: string | null
+    end_date: string
+    members?: {
+        id?: string | number
+        full_name?: string | null
+        phone?: string | null
+        photo_url?: string | null
+    } | null
+    membership_plans?: { plan_name?: string | null } | null
+    plans?: { name?: string | null } | null
+}
+
 type ExpiredProps = {
-    expiredMembers: any[]
+    expiredMembers: ExpiredMember[]
     gymName?: string
-    plans: any[]
+    plans: React.ComponentProps<typeof RenewMemberModal>['plans']
 }
 
 export function ExpiredMembersWidget({ expiredMembers, gymName = 'Test Gym', plans }: ExpiredProps) {
@@ -23,7 +40,7 @@ export function ExpiredMembersWidget({ expiredMembers, gymName = 'Test Gym', pla
     const filteredExpired = useMemo(() =>{
         if(!searchQuery.trim()) return expiredMembers
         const q = searchQuery.toLowerCase()
-        return expiredMembers.filter((sub: any) => {
+        return expiredMembers.filter((sub) => {
             const fullName = sub.full_name || sub.members?.full_name || ''
             const phone = sub.phone || sub.members?.phone || ''
             return fullName.toLowerCase().includes(q) || phone.includes(q)
@@ -78,7 +95,7 @@ export function ExpiredMembersWidget({ expiredMembers, gymName = 'Test Gym', pla
                             <p className="text-xs text-slate-400 text-center py-4">No matching members found.</p>
                         ) : (
                             /* Map through filtered items instead of raw expiredMembers */
-                            filteredExpired.map((sub: any) => {
+                            filteredExpired.map((sub) => {
                                 const fullName = sub.full_name || sub.members?.full_name || 'Member'
                                 const phone = sub.phone || sub.members?.phone || ''
                                 const photoUrl = sub.members?.photo_url
@@ -93,8 +110,8 @@ export function ExpiredMembersWidget({ expiredMembers, gymName = 'Test Gym', pla
                                     gymName: gymName
                                 })
 
-                                const memberObj = sub.members || {
-                                    id: sub.member_id || sub.id,
+                                const memberObj = {
+                                    id: String(sub.members?.id ?? sub.member_id ?? sub.id ?? ''),
                                     full_name: fullName,
                                     phone: phone
                                 }

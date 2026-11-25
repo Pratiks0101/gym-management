@@ -1,28 +1,27 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { processMemberCheckIn } from "@/app/actions/attendance"
 import { CheckCircle2, XCircle, Loader2, Dumbbell, Phone } from "lucide-react"
 
 export default function MobileCheckInPage() {
-    const [token, setToken] = useState<string | null>(null)
-    const [gymId, setGymId] = useState<string | null>(null)
-    const [isLoaded, setIsLoaded] = useState(false)
+    const search = useSyncExternalStore(
+        (onChange) => {
+            window.addEventListener('popstate', onChange)
+            return () => window.removeEventListener('popstate', onChange)
+        },
+        () => window.location.search,
+        () => ''
+    )
+    const isLoaded = useSyncExternalStore(() => () => {}, () => true, () => false)
+    const urlParams = new URLSearchParams(search)
+    const token = urlParams.get('token')
+    const gymId = urlParams.get('gym')
 
     const [phone, setPhone] = useState('')
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
     const [message, setMessage] = useState('')
     const [memberName, setMemberName] = useState('')
-
-    // Read URL params ONCE directly from window.location on mount
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const urlParams = new URLSearchParams(window.location.search)
-            setToken(urlParams.get('token'))
-            setGymId(urlParams.get('gym'))
-            setIsLoaded(true)
-        }
-    }, [])
 
     async function handleCheckIn(e: React.SubmitEvent) {
         e.preventDefault()

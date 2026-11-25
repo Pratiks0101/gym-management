@@ -8,6 +8,11 @@ export default async function PaymentsPage() {
         console.error("Payment logs load error:", error)
     }
 
+    const normalizedPayments = payments.map((p) => ({
+        ...p,
+        members: Array.isArray(p.members) ? (p.members[0] ?? null) : p.members,
+    }))
+
     return (
         <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
 
@@ -21,7 +26,7 @@ export default async function PaymentsPage() {
             </div>
 
 
-            <PaymentSort initialPayments={payments} />
+            <PaymentSort initialPayments={normalizedPayments} />
         </div>
     )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { 
     LayoutDashboard, 
@@ -9,7 +10,6 @@ import {
     QrCode, 
     Dumbbell,
     Receipt,
-    LogOut,
 } from "lucide-react"
 
 import {
@@ -27,12 +27,20 @@ import {
 import { getInitials } from "@/lib/utils"
 import { LogoutButton } from "./auth/Logout"
 
+type PreviewTarget = {
+    url: string
+    title: string
+    subtitle?: string
+}
+
 type AppSidebarProps = {
     gymName: string
     userEmail?: string
+    logoUrl?: string | null
+    onPreviewImage?: (target: PreviewTarget) => void
 }
 
-export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
+export function AppSidebar({ gymName, userEmail, logoUrl, onPreviewImage }: AppSidebarProps) {
     const pathname = usePathname()
     const { setOpenMobile } = useSidebar()
 
@@ -46,6 +54,17 @@ export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
 
     const initials = getInitials(gymName)
 
+    const handleLogoClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if(!logoUrl || !onPreviewImage) return
+        e.preventDefault()
+        e.stopPropagation()
+        onPreviewImage({
+            url: logoUrl,
+            title: `${gymName} Logo`,
+            subtitle: userEmail || "Gym Owner",
+        })
+    }
+
     return (
         <Sidebar collapsible="icon" className="border-r border-slate-200 dark:border-slate-800">
             {/* Header with Gym Branding */}
@@ -54,8 +73,23 @@ export function AppSidebar({ gymName, userEmail }: AppSidebarProps) {
                     <SidebarMenuItem className="cursor-pointer">
                         <Link href="/dashboard">
                             <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shrink-0">
-                                    <Dumbbell className="h-5 w-5" />
+                                <div 
+                                    onClick={handleLogoClick}
+                                    title={logoUrl ? "Click to preview logo" : gymName}
+                                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shrink-0 overflow-hidden"
+                                >
+                                    {logoUrl ? (
+                                        <Image 
+                                            src={logoUrl}
+                                            alt={`${gymName} Logo`}
+                                            width={36}
+                                            height={36}
+                                            unoptimized
+                                            className="h-full w-full object-cover"
+                                        />
+                                    ) : (
+                                        <Dumbbell className="h-5 w-5" />
+                                    )}
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight truncate group-data-[collapsible=icon]:hidden">
                                     <span className="truncate font-extrabold text-slate-900 dark:text-white">

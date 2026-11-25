@@ -191,9 +191,28 @@ export async function getMembers() {
         return { data: [], error: error.message}
     }
 
-    const sortedMembers = (members || []).map((member: any) => {
+    type Subscription = {
+        created_at?: string | null
+        start_date?: string | null
+    }
+
+    type Member = {
+        id: string
+        full_name: string
+        phone: string
+        email?: string
+        gender?: string
+        photo_url?: string
+        status?: string
+        created_at?: string | null
+        subscriptions?: Subscription[]
+    }
+
+    const getSubTime = (sub: Subscription) => new Date(sub.created_at || sub.start_date || 0).getTime() 
+
+    const sortedMembers = (members || []).map((member: Member) => {
         const subscriptions = member.subscriptions ? [...member.subscriptions] : []
-        subscriptions.sort((a: any, b: any) => new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime())
+        subscriptions.sort((a: Subscription, b: Subscription) => getSubTime(b) - getSubTime(a))
         return { ...member, subscriptions }
     })
 

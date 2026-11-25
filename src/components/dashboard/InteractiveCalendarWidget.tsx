@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useTransition, useSyncExternalStore } from 'react'
 import { Calendar } from '@/components/ui/calendar'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
@@ -24,16 +24,16 @@ type PaymentRecord = {
 
 
 export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
-    const [mounted, setMounted] = useState(false)
+    const mounted = useSyncExternalStore(
+        () => () => {},
+        () => true,
+        () => false
+    )
     const [selectedDate, setSelectedDate] = useState<Date>(new Date())
     const [loading, setLoading] = useState(false)
     const [isPending, startTransition] = useTransition()
     const [attendances, setAttendances] = useState<AttendanceRecord[]>([])
     const [payments, setPayments] = useState<PaymentRecord[]>([])
-
-    useEffect(() => {
-        setMounted(true)
-    }, [])
 
     useEffect(() => {
         if (!gymId || !selectedDate) return
@@ -71,15 +71,19 @@ export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
                         .order('created_at', { ascending: false })
                     ])
 
-                    const fetchedAtt = (attData.data as any) || []
-                    const fetchedPay = (payData.data as any) || []
-
-                    // calenderCache.set(cacheKey, {attendance: fetchedAtt, payments: fetchedPay})
+                    const fetchedAtt: AttendanceRecord[] = (attData.data ?? []).map((record) => ({
+                        ...record,
+                        members: Array.isArray(record.members) ? record.members[0] ?? null : record.members,
+                    }))
+                    const fetchedPay: PaymentRecord[] = (payData.data ?? []).map((record) => ({
+                        ...record,
+                        members: Array.isArray(record.members) ? record.members[0] ?? null : record.members,
+                    }))
 
                     setAttendances(fetchedAtt)
                     setPayments(fetchedPay)
             } catch (err) {
-                console.error("Calender fetch error:", err)
+                console.error("Calendar fetch error:", err)
             } finally {
                 if(!isBackground) setLoading(false)
             }
@@ -88,10 +92,10 @@ export function InteractiveCalendarWidget({ gymId }: { gymId: string }) {
         fetchDateDetails()
 
         const channel = supabase
-            .channel(`calender-live-${gymId}`)
+            .channel(`calendar-live-${gymId}`)
             .on(
                 'postgres_changes',
-                {event: 'INSERT', schema: 'public', table: 'attendace', filter: `gym_id=eq.${gymId}`},
+                {event: 'INSERT', schema: 'public', table: 'attendance', filter: `gym_id=eq.${gymId}`},
                 () => {fetchDateDetails(true)}
             )
             .subscribe()

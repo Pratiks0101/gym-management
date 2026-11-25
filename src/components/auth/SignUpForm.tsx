@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 
 type SignUpFormProps = {
-    signupAction: (formData: FormData) => Promise<any>
+    signupAction: (formData: FormData) => Promise<void | { error?: string }>
 }
 
 export function SignUpForm({ signupAction }: SignUpFormProps) {

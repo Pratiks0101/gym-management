@@ -2,7 +2,6 @@ import { getMembers } from "@/app/actions/members";
 import { getMembershipPlans } from "@/app/actions/plans";
 import RegisterMemberForm from "@/components/RegisterMemberForm";
 import MembersTableList from "@/components/MembersTableList";
-import Link from "next/link";
 
 export default async function MembersPage() {
 
@@ -12,9 +11,15 @@ export default async function MembersPage() {
         getMembershipPlans()
     ])
 
-    const members = membersRes.data || []
+    const members = (membersRes.data || []).map((member) => ({
+        ...member,
+        subscriptions: member.subscriptions.filter(
+            (subscription): subscription is typeof subscription & { id: string } =>
+                "id" in subscription && typeof subscription.id === "string"
+        ) ?? []
+    }))
     const plans = plansRes.data || []
-    const activePlans = plans.filter((p: any) => p.is_active !== false)
+    const activePlans = plans.filter((p) => p.is_active !== false)
 
     return (
         <div className="p-4 sm:p-6 space-y-8 max-w-7xl mx-auto">

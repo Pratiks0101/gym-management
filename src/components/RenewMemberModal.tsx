@@ -100,7 +100,7 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
 
     const isAdvanceRenewal = calculatedStartDate !== getTodayString()
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault()
         const form = e.currentTarget
         setLoading(true)
@@ -123,9 +123,9 @@ export default function RenewMemberModal({member, plans, showText = false}: Rene
 
             setIsOpen(false)
             alert('Membership renewed successfully!')
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error)
-            alert(error.message || 'Failed to renew membership')
+            alert(error instanceof Error ? error.message : 'Failed to renew membership')
         } finally {
             setLoading(false)
         }

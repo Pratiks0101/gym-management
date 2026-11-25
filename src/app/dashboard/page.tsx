@@ -64,7 +64,7 @@ async function ChartsSection({ gymId }: { gymId: string }) {
     ])
 
     const activeMembersCount = activeMembersRes.count || 0
-    const lastDayItem = weeklyAttendanceData[weeklyAttendanceData.length - 1] as any
+    const lastDayItem = weeklyAttendanceData[weeklyAttendanceData.length - 1] as { total?: number; count?: number } | undefined
     const todayCount = lastDayItem?.total ?? lastDayItem?.count ?? 0
     const dynamicExpectedCount = activeMembersCount > 0 ? activeMembersCount : 10
 
@@ -91,7 +91,7 @@ async function ExpiringSection({ gymId, gymName }: { gymId: string, gymName: str
         getMembershipPlans()
     ])
 
-    const activePlans = (plansResult.data || []).filter((p: any) => p.is_active ?? true)
+    const activePlans = (plansResult.data || []).filter((p) => p.is_active ?? true)
     return <ExpiringSubscriptionsWidget expiringSoon={expiringSoon} gymName={gymName} plans={activePlans} />
 }
 
@@ -102,13 +102,19 @@ async function ExpiredSection({ gymId, gymName }: { gymId: string, gymName: stri
         getMembershipPlans()
     ])
 
-    const activePlans = (plansResult.data || []).filter((p: any) => p.is_active ?? true)
+    const activePlans = (plansResult.data || []).filter((p) => p.is_active ?? true)
     return <ExpiredMembersWidget expiredMembers={expiredMembers} gymName={gymName} plans={activePlans} />
 }
 
 async function PendingDuesSection({ gymId, gymName }: { gymId: string, gymName: string }) {
     const pendingDues = await getPendingDues(gymId)
-    return <PendingDuesCard pendingDues={pendingDues} gymName={gymName} />
+    const normalizedDues = pendingDues.map((due) => ({
+        ...due,
+        members: due.members
+            ? { ...due.members, photo_url: due.members.photo_url ?? undefined }
+            : undefined,
+    }))
+    return <PendingDuesCard pendingDues={normalizedDues} gymName={gymName} />
 }
 
 async function RecentPaymentsSection({ gymId }: { gymId: string }) {

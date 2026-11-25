@@ -16,6 +16,8 @@ export default function PhotoUpload({ onImageSelected, disabled = false }: Photo
     const streamRef = useRef<MediaStream | null>(null)
     const fileInputRef = useRef<HTMLInputElement | null>(null)
 
+    const captureCountRef = useRef(0)
+
     const compressImageNative = (file: File, maxDim = 800, quality = 0.75): Promise<File> => {
         return new Promise((resolve, reject) => {
             const img = document.createElement('img')
@@ -122,7 +124,7 @@ export default function PhotoUpload({ onImageSelected, disabled = false }: Photo
             if (videoRef.current) {
                 videoRef.current.srcObject = stream
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err)
             alert('Camera access denied or not available.')
             setIsCameraActive(false)
@@ -158,10 +160,8 @@ export default function PhotoUpload({ onImageSelected, disabled = false }: Photo
 
         const blob = new Blob([u8arr], { type: mime })
 
-        const uniqueId = typeof crypto !== 'undefined' && crypto.randomUUID 
-            ? crypto.randomUUID() 
-            : Math.random().toString(36).substring(2)
-        const file = new File([blob], `capture_${uniqueId}.jpg`, { type: 'image/jpeg' })
+        captureCountRef.current += 1
+        const file = new File([blob], `capture_${captureCountRef.current}.jpg`, { type: 'image/jpeg' })
 
         setPreview(URL.createObjectURL(file))
         onImageSelected(file)

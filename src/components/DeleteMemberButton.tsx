@@ -12,7 +12,7 @@ type DeleteMemberButtonProps = {
 export function DeleteMemberButton({ memberId, memberName }: DeleteMemberButtonProps) {
     const [isDeleting, setIsDeleting] = useState(false)
 
-    const handleDelete = async (e: React.FormEvent) => {
+    const handleDelete = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault()
         const confirmed = window.confirm(`Are you sure you want to delete ${memberName}? This action cannot be undone.`)
         if (!confirmed) return
@@ -20,8 +20,8 @@ export function DeleteMemberButton({ memberId, memberName }: DeleteMemberButtonP
         setIsDeleting(true)
         try {
             await deleteMembers(memberId)
-        } catch (error: any) {
-            alert(error.message || 'Failed to delete member')
+        } catch (error: unknown) {
+            alert(error instanceof Error ? error.message : 'Failed to delete member')
             setIsDeleting(false)
         }
     }

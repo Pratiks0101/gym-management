@@ -17,8 +17,8 @@ export function AddPlanForm() {
         try {
             await createMembershipPlan(formData)
             form.reset()
-        } catch (error: any) {
-            alert(error.message || 'Failed to create plan')
+        } catch (error: unknown) {
+            alert(error instanceof Error ? error.message : 'Failed to create plan')
         } finally {
             setLoading(false)
         }

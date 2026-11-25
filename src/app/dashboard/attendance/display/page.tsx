@@ -3,6 +3,12 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { redirect } from "next/navigation"
 import { DeskDisplayClient } from "@/components/DeskDisplayClient"
 
+function createSessionValues() {
+    const timestamp = Date.now()
+    const randomSalt = Math.random().toString(36).substring(2, 8)
+    return { timestamp, randomSalt }
+}
+
 export default async function DeskDisplayPage() {
     const supabase = await createClient()
 
@@ -19,8 +25,7 @@ export default async function DeskDisplayPage() {
 
 
     const adminSupabase = createAdminClient()
-    const timestamp = Date.now()
-    const randomSalt = Math.random().toString(36).substring(2, 8)
+    const { timestamp, randomSalt } = createSessionValues()
     const initialToken = `gym_${gym.id}_${timestamp}_${randomSalt}`
     const expiresAt = new Date(timestamp + 5 * 60 * 1000).toISOString()
 

@@ -22,8 +22,20 @@ import {
 
 type TimeRange = 'today' | 'week' | 'month' | 'all'
 
+type PaymentRecord = {
+    id: string | number
+    created_at: string
+    amount_paid: number | string | null
+    payment_method?: string | null
+    payment_type?: string | null
+    members?: {
+        full_name?: string | null
+        phone?: string | null
+    } | null
+}
+
 type PaymentSortProps = {
-    initialPayments: any[]
+    initialPayments: PaymentRecord[]
 }
 
 // Deterministic Date Formatter
@@ -49,7 +61,7 @@ function formatDate(dateString: string) {
 export default function PaymentSort({ initialPayments }: PaymentSortProps) {
     const [timeRange, setTimeRange] = useState<TimeRange>('month')
 
-    const filteredPayments = initialPayments.filter((p: any) => {
+    const filteredPayments = initialPayments.filter((p) => {
         if (timeRange === 'all') return true
 
         const paymentDate = new Date(p.created_at)
@@ -78,18 +90,18 @@ export default function PaymentSort({ initialPayments }: PaymentSortProps) {
         return true
     })
 
-    const totalRevenue = filteredPayments.reduce((acc: number, p: any) => acc + Number(p.amount_paid || 0), 0)
+    const totalRevenue = filteredPayments.reduce((acc, p) => acc + Number(p.amount_paid || 0), 0)
     const upiRevenue = filteredPayments
-        .filter((p: any) => p.payment_method?.toLowerCase() === 'upi')
-        .reduce((acc: number, p: any) => acc + Number(p.amount_paid || 0), 0)
+        .filter((p) => p.payment_method?.toLowerCase() === 'upi')
+        .reduce((acc, p) => acc + Number(p.amount_paid || 0), 0)
     const cashRevenue = filteredPayments
-        .filter((p: any) => p.payment_method?.toLowerCase() === 'cash')
-        .reduce((acc: number, p: any) => acc + Number(p.amount_paid || 0), 0)
+        .filter((p) => p.payment_method?.toLowerCase() === 'cash')
+        .reduce((acc, p) => acc + Number(p.amount_paid || 0), 0)
     const cardRevenue = filteredPayments
-        .filter((p: any) => p.payment_method?.toLowerCase() === 'card')
-        .reduce((acc: number, p: any) => acc + Number(p.amount_paid || 0), 0)
+        .filter((p) => p.payment_method?.toLowerCase() === 'card')
+        .reduce((acc, p) => acc + Number(p.amount_paid || 0), 0)
 
-    const getTypeBadge = (type: string) => {
+    const getTypeBadge = (type: string | null | undefined) => {
         switch (type?.toLowerCase()) {
             case 'registration':
                 return (
@@ -118,7 +130,7 @@ export default function PaymentSort({ initialPayments }: PaymentSortProps) {
         }
     }
 
-    const getMethodBadge = (method: string) => {
+    const getMethodBadge = (method: string | null | undefined) => {
         const m = method?.toLowerCase()
         if (m === 'upi') {
             return (
@@ -246,7 +258,7 @@ export default function PaymentSort({ initialPayments }: PaymentSortProps) {
                         No payment logs found for {rangeLabels[timeRange].toLowerCase()}.
                     </div>
                 ) : (
-                    filteredPayments.map((p: any) => (
+                    filteredPayments.map((p) => (
                         <div key={p.id} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
                             <div className="flex justify-between items-start">
                                 <div>
@@ -296,7 +308,7 @@ export default function PaymentSort({ initialPayments }: PaymentSortProps) {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredPayments.map((p: any) => (
+                            filteredPayments.map((p) => (
                                 <TableRow key={p.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
                                     <TableCell className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                                         {formatDate(p.created_at)}

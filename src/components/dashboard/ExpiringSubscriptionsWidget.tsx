@@ -1,15 +1,34 @@
 'use client'
 
 import Image from 'next/image'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, type ComponentProps } from 'react'
 import { Clock, MessageCircle, Search, X } from 'lucide-react'
 import { generateMembershipRenewalReminderLink } from '@/lib/whatsapp'
 import RenewMemberModal from '../RenewMemberModal' 
 
+type ExpiringMember = {
+    id?: string | number
+    full_name?: string | null
+    phone?: string | null
+    photo_url?: string | null
+}
+
+type ExpiringSubscription = {
+    id: string | number
+    member_id?: string | number
+    full_name?: string | null
+    phone?: string | null
+    end_date: string
+    plan_name?: string | null
+    members?: ExpiringMember | null
+    membership_plans?: { plan_name?: string | null } | null
+    plans?: { name?: string | null } | null
+}
+
 type ExpiringProps = {
-    expiringSoon: any[]
+    expiringSoon: ExpiringSubscription[]
     gymName?: string
-    plans: any[]
+    plans: ComponentProps<typeof RenewMemberModal>['plans']
 }
 
 export function ExpiringSubscriptionsWidget({ expiringSoon, gymName = 'Test Gym', plans }: ExpiringProps) {
@@ -22,7 +41,7 @@ export function ExpiringSubscriptionsWidget({ expiringSoon, gymName = 'Test Gym'
     const filteredExpiring = useMemo(() => {
         if (!searchQuery.trim()) return expiringSoon
         const q = searchQuery.toLowerCase()
-        return expiringSoon.filter((sub: any) => {
+        return expiringSoon.filter((sub) => {
             const fullName = sub.full_name || sub.members?.full_name || ''
             const phone = sub.phone || sub.members?.phone || ''
             return fullName.toLowerCase().includes(q) || phone.includes(q)
@@ -74,7 +93,7 @@ export function ExpiringSubscriptionsWidget({ expiringSoon, gymName = 'Test Gym'
                         {filteredExpiring.length === 0 ? (
                             <p className="text-xs text-slate-400 text-center py-4">No matching members found.</p>
                         ) : (
-                            filteredExpiring.map((sub: any) => {
+                            filteredExpiring.map((sub) => {
                                 const fullName = sub.full_name || sub.members?.full_name || 'Member'
                                 const phone = sub.phone || sub.members?.phone || ''
                                 const photoUrl = sub.members?.photo_url
@@ -89,8 +108,9 @@ export function ExpiringSubscriptionsWidget({ expiringSoon, gymName = 'Test Gym'
                                     gymName: gymName
                                 })
 
-                                const memberObj = sub.members || {
-                                    id: sub.member_id || sub.id,
+                                const memberObj = {
+                                    ...sub.members,
+                                    id: String(sub.members?.id ?? sub.member_id ?? sub.id),
                                     full_name: fullName,
                                     phone: phone
                                 }

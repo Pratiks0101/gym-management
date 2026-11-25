@@ -37,7 +37,7 @@ export default async function PlansPage() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {plans.map((plan: any) => {
+                            {plans.map((plan) => {
                                 const isActive = plan.is_active ?? true
                                 const handleToggle = async () => {
                                     'use server'

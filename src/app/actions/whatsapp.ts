@@ -2,13 +2,21 @@
 
 import { createClient } from '@/lib/supabase/server'
 
+export type MemberSummary = {
+    id: string
+    full_name: string
+    phone: string
+    photo_url?: string | null
+    gym_id?: string
+}
+
 export type ExpiringMember = {
     id: string
     full_name: string
     phone: string
     plan_name: string
     end_date: string
-    members?: any
+    members?: MemberSummary
 }
 
 export type PendingDueMember = {
@@ -18,7 +26,12 @@ export type PendingDueMember = {
     phone: string
     due_amount: number
     plan_name: string
-    members?: any
+    members?: MemberSummary
+}
+
+function firstOrSelf<T>(value: T | T[] | null | undefined): T | null {
+    if (!value) return null
+    return Array.isArray(value) ? (value[0] ?? null) : value
 }
 
 // Fetch members whose subscription expires in next N days (Optimized)
@@ -51,13 +64,13 @@ export async function getExpiringSubscriptions(gymId: string, daysAhead: number 
     }
 
     // Fast deduplication map
-    const memberLatestMap = new Map<string, any>()
+    const memberLatestMap = new Map<string, ExpiringMember>()
 
     for (const sub of data) {
-        const memberObj = Array.isArray(sub.members) ? sub.members[0] : sub.members
+        const memberObj = firstOrSelf(sub.members as MemberSummary | MemberSummary[] | null)
         const memberId = memberObj?.id
         if (memberId && !memberLatestMap.has(memberId)) {
-            const planObj = Array.isArray(sub.membership_plans) ? sub.membership_plans[0] : sub.membership_plans
+            const planObj = firstOrSelf(sub.membership_plans as { plan_name?: string } | { plan_name?: string }[] | null)
             memberLatestMap.set(memberId, {
                 id: memberObj.id,
                 full_name: memberObj.full_name,
@@ -95,17 +108,17 @@ export async function getExpiredSubscriptions(gymId: string): Promise<ExpiringMe
         return []
     }
 
-    const memberLatestMap = new Map<string, any>()
+    const memberLatestMap = new Map<string, ExpiringMember & { status: string }>()
 
     // Process rows: Since data is sorted descending, the FIRST time we see a member, it is guaranteed to be their LATEST subscription.
     for (const sub of data) {
-        const memberObj = Array.isArray(sub.members) ? sub.members[0] : sub.members
+        const memberObj = firstOrSelf(sub.members as MemberSummary | MemberSummary[] | null)
         const memberId = memberObj?.id
 
         if (memberId && !memberLatestMap.has(memberId)) {
             const rawPlan = sub.membership_plans
-            const planObj = Array.isArray(rawPlan) ? rawPlan[0] : rawPlan
-            const planName = (planObj as any)?.plan_name || 'General Plan'
+            const planObj = firstOrSelf(rawPlan as { plan_name?: string } | { plan_name?: string }[] | null)
+            const planName = (planObj as { plan_name?: string } | null)?.plan_name || 'General Plan'
             
             memberLatestMap.set(memberId, {
                 id: memberObj.id,
@@ -149,17 +162,17 @@ export async function getPendingDues(gymId: string): Promise<PendingDueMember[]>
         return []
     }
 
-    return data.map((sub: any) => {
-        const memberObj = Array.isArray(sub.members) ? sub.members[0] : sub.members
-        const planObj = Array.isArray(sub.membership_plans) ? sub.membership_plans[0] : sub.membership_plans
+    return data.map((sub) => {
+        const memberObj = firstOrSelf(sub.members as MemberSummary | MemberSummary[] | null)
+        const planObj = firstOrSelf(sub.membership_plans as { plan_name?: string } | { plan_name?: string }[] | null)
         return {
             id: sub.id,
             member_id: sub.member_id || memberObj?.id,
-            full_name: memberObj?.full_name,
-            phone: memberObj?.phone,
+            full_name: memberObj?.full_name || 'Unknown Member',
+            phone: memberObj?.phone || '',
             plan_name: planObj?.plan_name || 'General Plan',
             due_amount: Number(sub.due_amount || 0),
-            members: memberObj
+            members: memberObj ?? undefined
         }
     })
 }

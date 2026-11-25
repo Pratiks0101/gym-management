@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, type ComponentProps } from "react"
 import { processManualCheckIn } from "@/app/actions/attendance"
 import { RecentCheckIn } from "@/components/dashboard/RecentCheckIn"
 import { 
@@ -24,7 +24,7 @@ type Props = {
     gymId: string
     initialMembers: MemberItem[]
     initialCheckedIn: string[]
-    initialLogs: any[]
+    initialLogs: ComponentProps<typeof RecentCheckIn>["initialLogs"]
 }
 
 export function AttendanceClientView({ gymId, initialMembers, initialCheckedIn, initialLogs }: Props) {

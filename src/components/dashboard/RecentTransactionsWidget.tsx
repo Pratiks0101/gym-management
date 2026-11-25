@@ -1,8 +1,17 @@
 import Link from 'next/link'
 import { Calendar } from 'lucide-react'
 
+type RecentPayment = {
+    id: string | number
+    created_at: string
+    amount_paid: number | string
+    members?: {
+        full_name?: string | null
+    } | null
+}
+
 type TransactionsProps = {
-    recentPayments: any[]
+    recentPayments: RecentPayment[]
 }
 
 export function RecentTransactionsWidget({ recentPayments }: TransactionsProps) {
@@ -20,7 +29,7 @@ export function RecentTransactionsWidget({ recentPayments }: TransactionsProps) 
 
             {recentPayments && recentPayments.length > 0 ? (
                 <div className="space-y-3">
-                    {recentPayments.map((p: any) => (
+                    {recentPayments.map((p) => (
                         <div key={p.id} className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 flex items-center justify-between">
                             <div>
                                 <p className="font-bold text-xs text-slate-900 dark:text-white">

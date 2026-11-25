@@ -41,8 +41,14 @@ export function ResetPasswordForm({ updatePasswordAction }: ResetPasswordFormPro
                 setError(result.error)
                 setIsUpdating(false)
             }
-        } catch (err: any) {
-            if(err?.digest?.includes('NEXT REDIRECT')) {
+        } catch (err: unknown) {
+            if (
+                typeof err === 'object' &&
+                err !== null &&
+                'digest' in err &&
+                typeof err.digest === 'string' &&
+                err.digest.includes('NEXT_REDIRECT')
+            ) {
                 throw err
         }
         console.error('Error updating password:', err)

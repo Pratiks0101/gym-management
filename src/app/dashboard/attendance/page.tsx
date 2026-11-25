@@ -42,7 +42,10 @@ export default async function AttendancePage() {
 
     const initialMembers = membersRes.data || []
     const initialCheckedIn = attendanceRes.data ? attendanceRes.data.map(a => a.member_id) : []
-    const initialLogs = recentLogsRes.data || []
+    const initialLogs = (recentLogsRes.data || []).flatMap(log => {
+        const member = Array.isArray(log.members) ? log.members[0] : log.members
+        return member ? [{ ...log, members: member }] : []
+    })
 
     return (
         <AttendanceClientView 

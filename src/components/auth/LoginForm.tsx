@@ -12,8 +12,12 @@ type ResetResult = {
     message?: string
 }
 
+type LoginActionResult = {
+    error?: string
+}
+
 type LoginFormProps = {
-    loginAction: (formData: FormData) => Promise<any>
+    loginAction: (formData: FormData) => Promise<void | LoginActionResult>
     requestPasswordResetAction?: (email:string) => Promise<ResetResult>
 }
 
